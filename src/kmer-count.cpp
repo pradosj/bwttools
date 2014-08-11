@@ -4,9 +4,10 @@
 #include <stack>
 #include <memory>
 #include <getopt.h>
-#include "bwt.h"
-#include "BWTInterval.h"
-#include "BWTAlgorithms.h"
+
+#include <bwt.h>
+#include <BWTInterval.h>
+#include <BWTAlgorithms.h>
 
 
 template<> const size_t AlphaCount16::maxValue = std::numeric_limits<uint16_t>::max();

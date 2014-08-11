@@ -1,16 +1,11 @@
 
+kmer-count:kmer-count.cpp libbwt/libbwt.a
+	$(CXX) $(CXXFLAGS) -o $@ -Ilibbwt $^
 
-OBJECTS := Occurrence.o BWTReader.o bwt.o BWTAlgorithms.o
-
-
-all:kmer-count
-
-
-kmer-count:kmer-count.cpp $(OBJECTS)
-	$(CXX) $(CXXFLAGS) -o $@ $^
-
+libbwt/libbwt.a:
+	$(MAKE) -C $(@D)
 
 clean:
-	rm -f kmer-count *.o
+	rm -f kmer-count
 
 
