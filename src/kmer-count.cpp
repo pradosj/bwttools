@@ -97,8 +97,8 @@ void traverse_kmer(size_t n, const bwt** pBWTs, unsigned int k) {
     std::string str; // string storing the current path
 
     // Intitialize the search with root elements
-    for(size_t i = 0; i < DNA_ALPHABET_SIZE; ++i) {
-        stack_elt_t e(str.size(),ALPHABET[i]);
+    for(size_t i = 1; i < BWT_ALPHABET::ALPHABET_SIZE; ++i) {
+        stack_elt_t e(str.size(),BWT_ALPHABET::RANK_ALPHABET[i]);
         BWTAlgorithms::initInterval(e.range,e.bp,pBWTs[0]);
         if (e.range.isValid()) stack.push(e);
     }
@@ -138,8 +138,8 @@ void traverse_kmer(size_t n, const bwt** pBWTs, unsigned int k) {
             }
         } else {
             // not yet a suffix of size k, push next candidates
-            for(size_t i = 0; i < DNA_ALPHABET_SIZE; ++i) {
-                stack_elt_t e(str.size(),ALPHABET[i],top.range);
+            for(size_t i = 1; i < BWT_ALPHABET::ALPHABET_SIZE; ++i) {
+                stack_elt_t e(str.size(),BWT_ALPHABET::RANK_ALPHABET[i],top.range);
                 BWTAlgorithms::updateInterval(e.range,e.bp,pBWTs[0]);
                 if (e.range.isValid()) stack.push(e);
             }
