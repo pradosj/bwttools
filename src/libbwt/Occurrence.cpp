@@ -21,7 +21,7 @@ void Occurrence::initialize(const BWTString& bwStr, int sampleRate) {
     AlphaCount64 sum;
     for(size_t i = 0; i < l; ++i) {
         char currB = bwStr.get(i);
-        sum.increment(currB);
+        sum[currB]++;
         if(i % m_sampleRate == 0)
             m_values[i / m_sampleRate] = sum;
     }
@@ -46,7 +46,7 @@ int Occurrence::calculateShiftValue(int divisor) {
 
 //
 void Occurrence::set(char a, size_t i, BaseCount s) {
-    m_values[i].set(a, s);
+    m_values[i][a] = s;
 }
 
 //
@@ -60,10 +60,10 @@ void Occurrence::validate(const BWTString& bwStr) const {
     AlphaCount64 sum;
     for(size_t i = 0; i < l; ++i) {
         char currB = bwStr.get(i);
-        sum.increment(currB);
+        sum[currB]++;
         AlphaCount64 calculated = get(bwStr, i);
         for(int i = 0; i < BWT_ALPHABET::ALPHABET_SIZE; ++i)
-            assert(calculated.get(BWT_ALPHABET::RANK_ALPHABET[i]) == sum.get(BWT_ALPHABET::RANK_ALPHABET[i]));
+            assert(calculated[BWT_ALPHABET::RANK_ALPHABET[i]] == sum[BWT_ALPHABET::RANK_ALPHABET[i]]);
     }
 }
 

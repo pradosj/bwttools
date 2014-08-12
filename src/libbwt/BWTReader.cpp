@@ -75,6 +75,6 @@ char BWTReaderBinary::readBWChar() {
     }
 
     // Decrement the current run and emit its symbol
-    m_currRun.decrementCount();
-    return m_currRun.getChar();
+    --m_currRun;
+    return m_currRun.value();
 }

@@ -5,6 +5,7 @@
 #ifndef OCCURRENCE_H
 #define OCCURRENCE_H
 
+#include "AlphaCount.h"
 #include "Alphabet.h"
 #include "EncodedString.h"
 #include <vector>
@@ -41,12 +42,10 @@ class Occurrence {
 
             // Choose the closest index or force the choice to lower_idx is the upper_idx is invalid
             if((idx - lower_start < upper_start - idx) || upper_idx == m_values.size()) {
-                for(size_t j = lower_start + 1; j <= idx; ++j)
-                    sum.increment(bwStr.get(j));
+                for(size_t j = lower_start + 1; j <= idx; ++j) sum[bwStr.get(j)]++;
                 return m_values[lower_idx] + sum;
             } else {
-                for(size_t j = idx + 1; j <= upper_start; ++j)
-                    sum.increment(bwStr.get(j));
+                for(size_t j = idx + 1; j <= upper_start; ++j) sum[bwStr.get(j)]++;
                 return m_values[upper_idx] - sum;
             }
         }
@@ -59,7 +58,7 @@ class Occurrence {
         inline BaseCount get(const BWTString& bwStr, char a, size_t idx) const {
             // Quick path
             if((MOD_POWER_2(idx,m_sampleRate)) == 0)
-                return m_values[idx >> m_shift].get(a);
+                return m_values[idx >> m_shift][a];
 
             // Calculate the nearest sample to this index
             size_t lower_idx = idx >> m_shift;
@@ -74,13 +73,13 @@ class Occurrence {
                     if(bwStr.get(j) == a)
                         ++sum;
                 }
-                return m_values[lower_idx].get(a) + sum;
+                return m_values[lower_idx][a] + sum;
             } else {
                 for(size_t j = idx + 1; j <= upper_start; ++j) {
                     if(bwStr.get(j) == a)
                         ++sum;
                 }
-                return m_values[upper_idx].get(a) - sum;
+                return m_values[upper_idx][a] - sum;
             }
             
             //return get(bwStr, idx).get(a);

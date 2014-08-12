@@ -1,8 +1,3 @@
-//-----------------------------------------------
-// Copyright 2009 Wellcome Trust Sanger Institute
-// Written by Jared Simpson (js18@sanger.ac.uk)
-// Released under the GPL
-//-----------------------------------------------
 //
 // BWTAlgorithms.h - Algorithms for aligning to a bwt structure
 //
@@ -14,8 +9,6 @@
 #include <queue>
 #include <list>
 
-#define LEFT_INT_IDX 0
-#define RIGHT_INT_IDX 1
 
 // structures
 
@@ -28,96 +21,27 @@ struct RankedPrefix {
 typedef std::vector<RankedPrefix> RankedPrefixVector;
 
 // functions
-namespace BWTAlgorithms
-{
-
-// get the interval(s) in pBWT/pRevBWT that corresponds to the string w using a backward search algorithm
-BWTInterval findInterval(const bwt* pBWT, const std::string& w);
-BWTIntervalPair findIntervalPair(const bwt* pBWT, const bwt* pRevBWT, const std::string& w);
-
-// Count the number of times the sequence w appears in the collection, including
-// its reverse complement
-size_t countSequenceOccurrences(const std::string& w, const bwt* pBWT);
+namespace BWTAlgorithms {
 
 // Update the given interval using backwards search
-// If the interval corrsponds to string S, it will be updated 
-// for string bS
-inline void updateInterval(BWTInterval& interval, char b, const bwt* pBWT)
-{
+// If the interval corresponds to string S, it will be updated for string bS
+inline void updateInterval(BWTInterval& interval, char b, const bwt* pBWT) {
     size_t pb = pBWT->getPC(b);
     interval.lower = pb + pBWT->getOcc(b, interval.lower - 1);
     interval.upper = pb + pBWT->getOcc(b, interval.upper) - 1;
 }
 
-// Update the interval pair for the right extension to symbol b.
-// In this version the AlphaCounts for the upper and lower intervals
-// have been calculated
-inline void updateBothR(BWTIntervalPair& pair, char b, const bwt* pRevBWT,
-                        AlphaCount64& l, AlphaCount64& u)
-{
-    AlphaCount64 diff = u - l;
-
-    pair.interval[0].lower = pair.interval[0].lower + diff.getLessThan(b);
-    pair.interval[0].upper = pair.interval[0].lower + diff.get(b) - 1;
-
-    // Update the right index directly
-    size_t pb = pRevBWT->getPC(b);
-    pair.interval[1].lower = pb + l.get(b);
-    pair.interval[1].upper = pb + u.get(b) - 1;
-}
-
-//
-// Update the interval pair for the right extension to symbol b.
-// 
-inline void updateBothR(BWTIntervalPair& pair, char b, const bwt* pRevBWT)
-{
-    // Update the left index using the difference between the AlphaCounts in the reverse table
-    AlphaCount64 l = pRevBWT->getFullOcc(pair.interval[1].lower - 1);
-    AlphaCount64 u = pRevBWT->getFullOcc(pair.interval[1].upper);
-    updateBothR(pair, b, pRevBWT, l, u);
-}
-
-// Update the interval pair for the left extension to symbol b.
-// In this version the AlphaCounts for the upper and lower intervals
-// have been calculated.
-inline void updateBothL(BWTIntervalPair& pair, char b, const bwt* pBWT, 
-                        AlphaCount64& l, AlphaCount64& u)
-{
-    AlphaCount64 diff = u - l;
-    // Update the left index using the difference between the AlphaCounts in the reverse table
-    pair.interval[1].lower = pair.interval[1].lower + diff.getLessThan(b);
-    pair.interval[1].upper = pair.interval[1].lower + diff.get(b) - 1;
-
-    // Update the left index directly
-    size_t pb = pBWT->getPC(b);
-    pair.interval[0].lower = pb + l.get(b);
-    pair.interval[0].upper = pb + u.get(b) - 1;
-}
-
-//
-// Update the interval pair for the left extension to symbol b.
-//
-inline void updateBothL(BWTIntervalPair& pair, char b, const bwt* pBWT)
-{
-    // Update the left index using the difference between the AlphaCounts in the reverse table
-    AlphaCount64 l = pBWT->getFullOcc(pair.interval[0].lower - 1);
-    AlphaCount64 u = pBWT->getFullOcc(pair.interval[0].upper);
-    updateBothL(pair, b, pBWT, l, u);
-}
+// get the interval(s) in pBWT that corresponds to the string w using a backward search algorithm
+// Find the interval in pBWT corresponding to w
+// If w does not exist in the BWT, the interval 
+// coordinates [l, u] will be such that l > u
+BWTInterval findInterval(const bwt* pBWT, const std::string& w);
 
 
 // Initialize the interval of index idx to be the range containining all the b suffixes
-inline void initInterval(BWTInterval& interval, char b, const bwt* pB)
-{
+inline void initInterval(BWTInterval& interval, char b, const bwt* pB) {
     interval.lower = pB->getPC(b);
     interval.upper = interval.lower + pB->getOcc(b, pB->getBWLen() - 1) - 1;
-}
-
-// Initialize the interval of index idx to be the range containining all the b suffixes
-inline void initIntervalPair(BWTIntervalPair& pair, char b, const bwt* pBWT, const bwt* pRevBWT)
-{
-    initInterval(pair.interval[LEFT_INT_IDX], b, pBWT);
-    initInterval(pair.interval[RIGHT_INT_IDX], b, pRevBWT);
 }
 
 // Return the counts of the bases between the lower and upper interval in pBWT
@@ -125,28 +49,20 @@ inline AlphaCount64 getExtCount(const BWTInterval& interval, const bwt* pBWT) {
     return pBWT->getOccDiff(interval.lower - 1, interval.upper);
 }
 
-// Return the count of all the possible one base extensions of the string w.
-// This returns the number of times the suffix w[i, l]A, w[i, l]C, etc 
-// appears in the FM-index for all i s.t. length(w[i, l]) >= minOverlap.
-AlphaCount64 calculateExactExtensions(const unsigned int overlapLen, const std::string& w, const bwt* pBWT, const bwt* pRevBWT);
-
 // Extract the complete string starting at idx in the BWT
-std::string extractString(const bwt* pBWT, size_t idx);
-
-// Extract the next len bases of the string starting at idx
-std::string extractString(const bwt* pBWT, size_t idx, size_t len);
+std::string extractString(const bwt& BWT, size_t idx);
 
 // Extract the substring from start, start+length of the sequence starting at position idx
-std::string extractSubstring(const bwt* pBWT, uint64_t idx, size_t start, size_t length = std::string::npos);
+std::string extractSubstring(const bwt& BWT, uint64_t idx, size_t start, size_t length = std::string::npos);
 
 // Extract all prefixes of the suffixes for the given interval, along
 // with their lexicographic rank.
-RankedPrefixVector extractRankedPrefixes(const bwt* pBWT, BWTInterval interval);
+RankedPrefixVector extractRankedPrefixes(const bwt& BWT, BWTInterval interval);
 
 // Extract symbols from the starting index of the BWT until the index lies
 // within the given interval. If the extraction hits the start of a string
 // without finding a prefix, the empty string is returned.
-std::string extractUntilInterval(const bwt* pBWT, int64_t start, const BWTInterval& interval);
+std::string extractUntilInterval(const bwt& BWT, int64_t start, const BWTInterval& interval);
 
 };
 

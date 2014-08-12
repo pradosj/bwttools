@@ -2,6 +2,10 @@
 #define RLUNIT_H
 
 
+#include <cassert>
+#include <cstdint>
+
+
 /*! \class RLUnit
  *  \brief A run-length encoded unit of the FM-index
  * 
@@ -18,80 +22,44 @@ struct RLUnit {
     uint8_t data;
 		
     RLUnit() : data(0) {}
-    RLUnit(char b) : data(1) {setChar(b);}
+    RLUnit(uint8_t b) : data(1) {setChar(b);}
 
     //! \return true if the count cannot be incremented
     inline bool isFull() const {return (data & RL_COUNT_MASK) == RL_FULL_COUNT;}
     inline bool isEmpty() const {return (data & RL_COUNT_MASK) == 0;}
-    inline bool isInitialized() const {return data > 0;}
 
-    // Add this run to the AlphaCount
-    // Only add up to maxCount symbols. Returns the number
-    // of symbols added
-    inline size_t addAlphaCount(AlphaCount64& ac, size_t max) const {
-        size_t count = std::min<decltype(max)>(getCount(),max);
-        ac.add(getChar(), count);
-        return count;
-    }
-
-    // Add this run to the count of base b if it matches
-    // Only add up to maxCount symbols. Returns the number
-    // of symbols in the current run, up to max
-    inline size_t addCount(char b, size_t& base_count, size_t max) const {
-        size_t run_len = std::min<decltype(max)>(getCount(),max);
-        if (getChar() == b) base_count += run_len;
-        return run_len;
-    }    
-
-    // Subtract this run from the AlphaCount
-    // Only subtract up to maxCount symbols. Returns the number
-    // of symbols added
-    inline size_t subtractAlphaCount(AlphaCount64& ac, size_t max) const {
-        size_t count = std::min<decltype(max)>(getCount(),max);
-        ac.subtract(getChar(), count);
-        return count;
-    }
-
-		// Subtract this run from the count of base b if it matches
-    // Only add up to maxCount symbols. Returns the number
-    // of symbols in the current run, up to max
-    inline size_t subtractCount(char b, size_t& base_count, size_t max) const {
-        size_t run_len = std::min<decltype(max)>(getCount(),max);
-        if (getChar() == b) base_count -= run_len;
-        return run_len;
-    }
-        
     // 
-    inline void incrementCount() {
+    inline RLUnit& operator++() {
         assert(!isFull());
         ++data;
+        return *this;
     }
 
     // 
-    inline void decrementCount() {
+    inline RLUnit& operator--() {
         assert(!isEmpty());
         --data;
+        return *this;
     }    
 
-    inline uint8_t getCount() const {
+    inline uint8_t length() const {
         assert((data & RL_COUNT_MASK) != 0);
         return data & RL_COUNT_MASK;
     }
 
     //! \brief Set the symbol
-    inline void setChar(char symbol) {
-        // Clear the current symbol
-        data &= RL_COUNT_MASK;        
-        uint8_t code = BWT_ALPHABET::getRank(symbol);
+    inline void setChar(uint8_t symbol) {
+        data &= RL_COUNT_MASK; // Clear the current symbol
+        uint8_t code = symbol;
         code <<= RL_SYMBOL_SHIFT;
         data |= code;
     }
 
     //! \brief Get the symbol
-    inline char getChar() const {
+    inline uint8_t value() const {
         uint8_t code = data & RL_SYMBOL_MASK;
         code >>= RL_SYMBOL_SHIFT;
-        return BWT_ALPHABET::getChar(code);
+        return code;
     }
 };
 

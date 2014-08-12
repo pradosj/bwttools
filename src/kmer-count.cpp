@@ -10,9 +10,6 @@
 #include <BWTAlgorithms.h>
 
 
-template<> const size_t AlphaCount16::maxValue = std::numeric_limits<uint16_t>::max();
-template<> const size_t AlphaCount64::maxValue = std::numeric_limits<uint64_t>::max();
-
 //
 // Getopt
 //

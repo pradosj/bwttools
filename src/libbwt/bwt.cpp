@@ -5,6 +5,7 @@
 #include <istream>
 #include <queue>
 #include <map>
+#include <limits>
 
 
 // macros
@@ -28,8 +29,8 @@ void bwt::append(char b) {
     bool increment = false;
     if(!m_rlString.empty()) {
         RLUnit& lastUnit = m_rlString.back();
-        if(lastUnit.getChar() == b && !lastUnit.isFull()) {
-            lastUnit.incrementCount();
+        if(lastUnit.value() == b && !lastUnit.isFull()) {
+            ++lastUnit;
             increment = true;
         }
     }
@@ -78,14 +79,13 @@ void bwt::initializeFMIndex() {
     size_t running_total = 0;
     AlphaCount64 running_ac;
 
-    for(size_t i = 0; i < m_rlString.size(); ++i)
-    {
+    for(size_t i = 0; i < m_rlString.size(); ++i) {
         // Update the count and advance the running total
         RLUnit& unit = m_rlString[i];
 
-        char symbol = unit.getChar();
-        uint8_t run_len = unit.getCount();
-        running_ac.add(symbol, run_len);
+        char symbol = unit.value();
+        uint8_t run_len = unit.length();
+        running_ac[symbol] += run_len;
         running_total += run_len;
 
         size_t curr_unit_index = i + 1;
@@ -93,8 +93,7 @@ void bwt::initializeFMIndex() {
 
         // Check whether to place a new large marker
         bool place_last_large_marker = last_symbol && curr_large_marker_index < num_large_markers;
-        while(running_total >= next_large_marker || place_last_large_marker)
-        {
+        while(running_total >= next_large_marker || place_last_large_marker) {
             size_t expected_marker_pos = curr_large_marker_index * m_largeSampleRate;
 
             // Sanity checks
@@ -103,7 +102,7 @@ void bwt::initializeFMIndex() {
             assert(expected_marker_pos <= running_total || place_last_large_marker);
             assert((running_total - expected_marker_pos) <= RLUnit::RL_FULL_COUNT || place_last_large_marker);
             assert(curr_large_marker_index < num_large_markers);
-            assert(running_ac.getSum() == running_total);
+            assert(running_ac.sum() == running_total);
 
             LargeMarker& marker = m_largeMarkers[curr_large_marker_index];
             marker.unitIndex = i + 1;
@@ -116,8 +115,7 @@ void bwt::initializeFMIndex() {
 
         // Check whether to place a new small marker
         bool place_last_small_marker = last_symbol && curr_small_marker_index < num_small_markers;
-        while(running_total >= next_small_marker || place_last_small_marker)
-        {
+        while(running_total >= next_small_marker || place_last_small_marker) {
             // Place markers
             size_t expected_marker_pos = curr_small_marker_index * m_smallSampleRate;
 
@@ -127,7 +125,7 @@ void bwt::initializeFMIndex() {
             assert(expected_marker_pos <= running_total || place_last_small_marker);
             assert((running_total - expected_marker_pos) <= RLUnit::RL_FULL_COUNT || place_last_small_marker);
             assert(curr_small_marker_index < num_small_markers);
-            assert(running_ac.getSum() == running_total);
+            assert(running_ac.sum() == running_total);
     
             // Calculate the number of rl units that are contained in this block
             if(curr_unit_index - prev_small_marker_unit_index > std::numeric_limits<uint16_t>::max())
@@ -147,16 +145,14 @@ void bwt::initializeFMIndex() {
 
             // Set the 8bit AlphaCounts as the sum since the last large (superblock) marker
             AlphaCount16 smallAC;
-            for(size_t j = 0; j < BWT_ALPHABET::ALPHABET_SIZE; ++j)
-            {
-                size_t v = running_ac.getByIdx(j) - prev_large_marker.counts.getByIdx(j);
-                if(v > smallAC.getMaxValue())
-                {
+            for(size_t j = 0; j < BWT_ALPHABET::ALPHABET_SIZE; ++j) {
+                size_t v = running_ac[j] - prev_large_marker.counts[j];
+                if(v > std::numeric_limits<AlphaCount16::value_type>::max()) {
                     std::cerr << "Error: Number of symbols in occurrence array block " << curr_small_marker_index 
-                              << " exceeds the maximum value (" << v << " > " << smallAC.getMaxValue() << ")\n";
+                              << " exceeds the maximum value (" << v << " > " << std::numeric_limits<AlphaCount16::value_type>::max() << ")\n";
                     exit(EXIT_FAILURE);
                 }
-                smallAC.setByIdx(j, v);
+                smallAC[j] = v;
             }
             
             // Set the small marker
@@ -176,11 +172,11 @@ void bwt::initializeFMIndex() {
     assert(curr_large_marker_index == num_large_markers);
 
     // Initialize C(a)
-    m_predCount.set('$', 0);
-    m_predCount.set('A', running_ac.get('$')); 
-    m_predCount.set('C', m_predCount.get('A') + running_ac.get('A'));
-    m_predCount.set('G', m_predCount.get('C') + running_ac.get('C'));
-    m_predCount.set('T', m_predCount.get('G') + running_ac.get('G'));
+    m_predCount['$'] = 0;
+    m_predCount['A'] = running_ac['$'];
+    m_predCount['C'] = m_predCount['A'] + running_ac['A'];
+    m_predCount['G'] = m_predCount['C'] + running_ac['C'];
+    m_predCount['T'] = m_predCount['G'] + running_ac['G'];
 }
 
 // get the number of markers required to cover the n symbols at sample rate of d
@@ -198,8 +194,8 @@ void bwt::print() const {
     for(size_t i = 0; i < numRuns; ++i)
     {
         const RLUnit& unit = m_rlString[i];
-        char symbol = unit.getChar();
-        size_t length = unit.getCount();
+        char symbol = unit.value();
+        size_t length = unit.length();
         for(size_t j = 0; j < length; ++j)
             std::cout << symbol;
         std::cout << " : " << symbol << "," << length << "\n"; 
@@ -241,18 +237,13 @@ void bwt::printRunLengths() const {
     size_t adjacentSingletons = 0;
     size_t numRuns = getNumRuns();
     size_t totalRuns = 0;
-    for(size_t i = 0; i < numRuns; ++i)
-    {
+    for(size_t i = 0; i < numRuns; ++i) {
         const RLUnit& unit = m_rlString[i];
-        size_t length = unit.getCount();
-        if(unit.getChar() == prevSym)
-        {
-            currLen += unit.getCount();
-        }
-        else
-        {
-            if(prevSym != '\0')
-            {
+        size_t length = unit.length();
+        if(unit.value() == prevSym) {
+            currLen += unit.length();
+        } else {
+            if(prevSym != '\0') {
                 if(currLen >= 200)
                     rlDist[200]++;
                 else
@@ -260,11 +251,10 @@ void bwt::printRunLengths() const {
                 totalRuns++;
             }
             currLen = length;
-            prevSym = unit.getChar();
+            prevSym = unit.value();
         }
 
-        if(length == 1 && prevRunLen == 1)
-        {
+        if(length == 1 && prevRunLen == 1) {
             adjacentSingletons += 1;
             prevRunLen = 0;
         }
@@ -274,8 +264,7 @@ void bwt::printRunLengths() const {
     printf("Run length distrubtion\n");
     printf("rl\tcount\tfrac\n");
     double cumulative_mb = 0.0f;
-    for(DistMap::iterator iter = rlDist.begin(); iter != rlDist.end(); ++iter)
-    {
+    for(DistMap::iterator iter = rlDist.begin(); iter != rlDist.end(); ++iter) {
         cumulative_mb += ((double)iter->second / (1024 * 1024));
         printf("%zu\t%zu\t%lf\t%lf\n", iter->first, iter->second, double(iter->second) / totalRuns, cumulative_mb);
     }

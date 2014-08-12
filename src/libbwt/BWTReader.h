@@ -1,17 +1,11 @@
-//-----------------------------------------------
-// Copyright 2010 Wellcome Trust Sanger Institute
-// Written by Jared Simpson (js18@sanger.ac.uk)
-// Released under the GPL 
-//-----------------------------------------------
-//
-// BWTWriterBinary - Read a run length encoded binary BWT file from disk
-//
 #ifndef BWTREADERBINARY_H
 #define BWTREADERBINARY_H
 
-#include "Occurrence.h"
-#include "EncodedString.h"
+#include <cstdint>
+#include <string>
+#include <vector>
 #include "BWTReader.h"
+#include "RLunit.h"
 #include "bwt.h"
 
 
@@ -20,8 +14,6 @@ enum BWFlag {BWF_NOFMI = 0,BWF_HASFMI};
 
 const uint16_t RLBWT_FILE_MAGIC = 0xCACA;
 const uint16_t BWT_FILE_MAGIC = 0xEFEF;
-
-class bwt;
 
 
 /*!\class BWTReaderBinary
@@ -34,7 +26,6 @@ class BWTReaderBinary {
 
         //
         void read(bwt* pRLBWT);
-
         void readHeader(size_t& num_strings, size_t& num_symbols, BWFlag& flag);
         char readBWChar();
         void readRuns(std::vector<RLUnit>& out, size_t numRuns);

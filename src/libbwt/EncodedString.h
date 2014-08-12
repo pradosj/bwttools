@@ -23,8 +23,7 @@
 #include "BWT4Codec.h"
 
 template<class Codec>
-class EncodedString
-{
+class EncodedString {
     typedef typename Codec::UNIT_TYPE StorageUnit;
 
     public:
@@ -33,16 +32,14 @@ class EncodedString
         EncodedString() : m_len(0), m_capacity(0), m_data(0) {}
 
         //
-        EncodedString(const EncodedString& other)
-        {
+        EncodedString(const EncodedString& other) {
             // deep copy
             _alloc(other.m_len);
             _copy(other);
         }
 
         //
-        EncodedString(const std::string& seq)
-        {
+        EncodedString(const std::string& seq) {
             size_t n = seq.length();
             _alloc(n);
             _copy(seq.c_str(), n);

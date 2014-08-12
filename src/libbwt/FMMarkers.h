@@ -4,38 +4,22 @@
 #ifndef FMMARKERS_H
 #define FMMARKERS_H
 
+#include "AlphaCount.h"
 
-// LargeMarker - To allow random access to the 
-// BWT symbols and implement the occurrence array
-// we keep a vector of symbol counts every D1 symbols.
-// These counts are the absolute number of times each
-// symbol has been seen up to that point.
-// 
+
+/*! \class LargeMarker 
+ * \brief To allow random access to the BWT symbols and implement the occurrence array we keep a vector of symbol counts every D1 symbols.$
+ *        These counts are the absolute number of times each symbol has been seen up to that point.
+ */
 struct LargeMarker {
     LargeMarker() : unitIndex(0) {}
 
     // Calculate the actual position in the uncompressed BWT of this marker
     // This is the number of symbols preceding this marker
-    inline size_t getActualPosition() const {return counts.getSum();}
-
-    void print() const {
-        std::cout << "Large marker actual pos: " << getActualPosition() << "\n";
-        std::cout << "Marker unit index: " << unitIndex << "\n";
-        std::cout << "Marker counts: ";
-        for(int i = 0; i < BWT_ALPHABET::ALPHABET_SIZE; ++i) {
-            std::cout << (int)counts.getByIdx(i) << " ";
-        }
-        std::cout << "\n";
-    }
+    inline size_t getActualPosition() const {return counts.sum();}
 
     // Returns true if the data in the markers is identical
-    bool operator==(const LargeMarker& rhs) {
-        for(size_t i = 0; i < BWT_ALPHABET::ALPHABET_SIZE; ++i) {
-            if(counts.getByIdx(i) != rhs.counts.getByIdx(i))
-                return false;
-        }
-        return unitIndex == rhs.unitIndex;
-    }
+    bool operator==(const LargeMarker& rhs) {return counts==rhs.counts && unitIndex == rhs.unitIndex;}
 
     // The number of times each symbol has been seen up to this marker
     AlphaCount64 counts; 
@@ -55,14 +39,7 @@ struct SmallMarker {
 
     // Calculate the actual position in the uncompressed BWT of this marker
     // This is the number of symbols preceding this marker
-    inline size_t getCountSum() const {return counts.getSum();}
-
-    void print() const {
-        for(int i = 0; i < BWT_ALPHABET::ALPHABET_SIZE; ++i) {
-            std::cout << (int)counts.getByIdx(i) << " ";
-        }
-        std::cout << "\n";
-    }
+    inline size_t getCountSum() const {return counts.sum();}
 
     // The number of times each symbol has been seen up to this marker
     AlphaCount16 counts; 

@@ -1,20 +1,61 @@
 #ifndef BWT_H
 #define BWT_H
 
+
+#include "RLUnit.h"
+#include "Alphabet.h"
 #include <algorithm>
 #include <vector>
 
 
-#include "Alphabet.h"
-#include "RLUnit.h"
+
+
 #include "FMMarkers.h"
 #include "Occurrence.h"
 
 
 
-///
-/// Run-length encoded Burrows Wheeler transform
-///
+
+
+/*! \brief Add run_length of a RLUnit to an AlphaCount, only adding up to max symbols.
+ *  \return the number of symbols added
+ */
+inline size_t add(AlphaCount64& ac, RLUnit n, size_t max) {
+    size_t count = std::min<decltype(max)>(n.length(),max);
+    ac[n.value()] += count;
+    return count;
+}
+
+/*! \brief Subtract run_length of a RLUnit from an AlphaCount, only subtracting up to max symbols
+ *  \return the number of symbols subtracted
+ */
+inline size_t sub(AlphaCount64& ac, RLUnit n, size_t max) {
+    size_t count = std::min<decltype(max)>(n.length(),max);
+    ac[n.value()] -= count;
+    return count;
+}
+
+/*! \brief Add run_length of a RLUnit to base_count if base b match the value of the RLUnit. Only add up to maxCount symbols. 
+ *  \return the number of symbols in the run, up to max
+*/
+inline size_t addIfMatch(char b, size_t& base_count, RLUnit rl, size_t max) {
+    size_t run_len = std::min<decltype(max)>(rl.length(),max);
+    if (rl.value() == b) base_count += run_len;
+    return run_len;
+}
+
+/*! \brief Subtract run_length of a RLUnit to base_count if base b match the value of the RLUnit. Only add up to maxCount symbols. 
+ * \return the number of symbols in the run, up to max
+*/
+inline size_t subIfMatch(char b, size_t& base_count, RLUnit rl, size_t max) {
+    size_t run_len = std::min<decltype(max)>(rl.length(),max);
+    if (rl.value() == b) base_count -= run_len;
+    return run_len;
+}
+
+/*! \class bwt
+ *  \brief Run-length encoded Burrows Wheeler transform
+ */
 class bwt {
     public:
     
@@ -27,7 +68,7 @@ class bwt {
         // Append a symbol to the bw string
         void append(char b);
 
-        inline char getChar(size_t idx) const {
+        inline char operator[](size_t idx) const {
             // Calculate the Marker who's position is not less than idx
             const LargeMarker& upper = getUpperMarker(idx);
             size_t current_position = upper.getActualPosition();
@@ -39,13 +80,13 @@ class bwt {
             while(current_position > idx) {
                 assert(symbol_index != 0);
                 symbol_index -= 1;
-                current_position -= m_rlString[symbol_index].getCount();
+                current_position -= m_rlString[symbol_index].length();
             }
 
             // symbol_index is now the index of the run containing the idx symbol
             const RLUnit& unit = m_rlString[symbol_index];
-            assert(current_position <= idx && current_position + unit.getCount() >= idx);
-            return unit.getChar();
+            assert(current_position <= idx && current_position + unit.length() >= idx);
+            return unit.value();
         }
 
         // Get the index of the marker nearest to position in the bwt
@@ -83,12 +124,12 @@ class bwt {
 
             LargeMarker absoluteMarker = m_largeMarkers[curr_large_idx];
             const SmallMarker& relative = m_smallMarkers[target_small_idx];
-            alphacount_add16(absoluteMarker.counts, relative.counts);
+            absoluteMarker.counts += relative.counts;
             absoluteMarker.unitIndex += relative.unitCount;
             return absoluteMarker;
         }
 
-        inline BaseCount getPC(char b) const { return m_predCount.get(b); }
+        inline BaseCount getPC(char b) const { return m_predCount[b]; }
 
         // Return the number of times char b appears in bwt[0, idx]
         inline BaseCount getOcc(char b, size_t idx) const {
@@ -101,7 +142,7 @@ class bwt {
             bool forwards = current_position < idx;
             //printf("cp: %zu idx: %zu f: %d dist: %d\n", current_position, idx, forwards, (int)idx - (int)current_position);
 
-            size_t running_count = marker.counts.get(b);
+            size_t running_count = marker.counts[b];
             size_t symbol_index = marker.unitIndex; 
 
             if(forwards)
@@ -112,8 +153,7 @@ class bwt {
         }
 
         // Return the number of times each symbol in the alphabet appears in bwt[0, idx]
-        inline AlphaCount64 getFullOcc(size_t idx) const 
-        { 
+        inline AlphaCount64 getFullOcc(size_t idx) const { 
             // The counts in the marker are not inclusive (unlike the Occurrence class)
             // so we increment the index by 1.
             ++idx;
@@ -134,17 +174,13 @@ class bwt {
 
         // Adds to the count of symbol b in the range [targetPosition, currentPosition)
         // Precondition: currentPosition <= targetPosition
-        inline void accumulateBackwards(AlphaCount64& running_count, size_t currentUnitIndex, size_t currentPosition, const size_t targetPosition) const
-        {
+        inline void accumulateBackwards(AlphaCount64& running_count, size_t currentUnitIndex, size_t currentPosition, const size_t targetPosition) const {
             // Search backwards (towards 0) until idx is found
-            while(currentPosition != targetPosition)
-            {
+            while(currentPosition != targetPosition) {
                 size_t diff = currentPosition - targetPosition;
                 assert(currentUnitIndex != 0);
                 --currentUnitIndex;
-
-                const RLUnit& curr_unit = m_rlString[currentUnitIndex];
-                currentPosition -= curr_unit.subtractAlphaCount(running_count, diff);
+                currentPosition -= sub(running_count, m_rlString[currentUnitIndex], diff);
             }
         }
 
@@ -155,8 +191,7 @@ class bwt {
             while(currentPosition != targetPosition) {
                 size_t diff = targetPosition - currentPosition;
                 assert(currentUnitIndex != m_rlString.size());
-                const RLUnit& curr_unit = m_rlString[currentUnitIndex];
-                currentPosition += curr_unit.addAlphaCount(running_count, diff);
+                currentPosition += add(running_count, m_rlString[currentUnitIndex], diff);
                 ++currentUnitIndex;
             }
         }
@@ -169,8 +204,7 @@ class bwt {
                 size_t diff = currentPosition - targetPosition;
                 assert(currentUnitIndex != 0);
                 --currentUnitIndex;
-                const RLUnit& curr_unit = m_rlString[currentUnitIndex];
-                currentPosition -= curr_unit.subtractCount(b, running_count, diff);
+                currentPosition -= subIfMatch(b, running_count, m_rlString[currentUnitIndex], diff);
             }
         }
 
@@ -182,7 +216,7 @@ class bwt {
                 size_t diff = targetPosition - currentPosition;
                 assert(currentUnitIndex != m_rlString.size());
                 const RLUnit& curr_unit = m_rlString[currentUnitIndex];
-                currentPosition += curr_unit.addCount(b, running_count, diff);
+                currentPosition += addIfMatch(b, running_count, curr_unit, diff);
                 ++currentUnitIndex;
             }
         }
@@ -199,7 +233,7 @@ class bwt {
         // Return the first letter of the suffix starting at idx
         inline char getF(size_t idx) const {
             size_t ci = 0;
-            while(ci < BWT_ALPHABET::ALPHABET_SIZE && m_predCount.getByIdx(ci) <= idx)
+            while(ci < BWT_ALPHABET::ALPHABET_SIZE && m_predCount[ci] <= idx)
                 ci++;
             assert(ci != 0);
             return BWT_ALPHABET::RANK_ALPHABET[ci - 1];
@@ -212,7 +246,6 @@ class bwt {
 
         // IO
         friend class BWTReaderBinary;
-        friend class BWTWriterBinary;
 
     private:
         // Default constructor is not allowed
