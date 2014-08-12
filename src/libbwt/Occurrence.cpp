@@ -9,24 +9,6 @@
 //
 #include "Occurrence.h"
 
-// Initialize the counts from the bwt string b
-void Occurrence::initialize(const BWTString& bwStr, int sampleRate) {
-    m_sampleRate = sampleRate;
-    m_shift = calculateShiftValue(m_sampleRate);
-
-    size_t l = bwStr.length();
-    int num_samples = (l % m_sampleRate == 0) ? (l / m_sampleRate) : (l / m_sampleRate + 1);
-    m_values.resize(num_samples);
-    
-    AlphaCount64 sum;
-    for(size_t i = 0; i < l; ++i) {
-        char currB = bwStr.get(i);
-        sum[currB]++;
-        if(i % m_sampleRate == 0)
-            m_values[i / m_sampleRate] = sum;
-    }
-}
-
 // 
 int Occurrence::calculateShiftValue(int divisor) {
     assert(divisor > 0);
@@ -52,19 +34,6 @@ void Occurrence::set(char a, size_t i, BaseCount s) {
 //
 size_t Occurrence::getByteSize() const {
     return m_values.size() * sizeof(AlphaCount64);
-}
-
-// Validate that the sampled occurrence array is correct
-void Occurrence::validate(const BWTString& bwStr) const {
-    size_t l = bwStr.length();
-    AlphaCount64 sum;
-    for(size_t i = 0; i < l; ++i) {
-        char currB = bwStr.get(i);
-        sum[currB]++;
-        AlphaCount64 calculated = get(bwStr, i);
-        for(int i = 0; i < BWT_ALPHABET::ALPHABET_SIZE; ++i)
-            assert(calculated[BWT_ALPHABET::RANK_ALPHABET[i]] == sum[BWT_ALPHABET::RANK_ALPHABET[i]]);
-    }
 }
 
 std::ostream& operator<<(std::ostream& out, const Occurrence& o) {

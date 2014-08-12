@@ -7,7 +7,6 @@
 
 #include "AlphaCount.h"
 #include "Alphabet.h"
-#include "EncodedString.h"
 #include <vector>
 
 // Power of 2 macros
@@ -24,67 +23,6 @@ class Occurrence {
         // Constructors
         Occurrence() : m_sampleRate(1) {}
 
-        // Initialize the counts from the bwt string b
-        void initialize(const BWTString& bwStr, int sampleRate);
-
-        //
-        inline const AlphaCount64 get(const BWTString& bwStr, size_t idx) const {
-            // Quick path
-            if((MOD_POWER_2(idx,m_sampleRate)) == 0) return m_values[idx >> m_shift];
-
-            // Calculate the nearest sample to this index
-            size_t lower_idx = idx >> m_shift;
-            size_t upper_idx = lower_idx + 1;
-            size_t lower_start = lower_idx << m_shift;
-            size_t upper_start = upper_idx << m_shift;
-
-            AlphaCount64 sum;
-
-            // Choose the closest index or force the choice to lower_idx is the upper_idx is invalid
-            if((idx - lower_start < upper_start - idx) || upper_idx == m_values.size()) {
-                for(size_t j = lower_start + 1; j <= idx; ++j) sum[bwStr.get(j)]++;
-                return m_values[lower_idx] + sum;
-            } else {
-                for(size_t j = idx + 1; j <= upper_start; ++j) sum[bwStr.get(j)]++;
-                return m_values[upper_idx] - sum;
-            }
-        }
-
-        // Get the alphacount difference between idx1 and idx0
-        inline AlphaCount64 getDiff(const BWTString& bwStr, size_t idx0, size_t idx1) const {
-            return get(bwStr, idx1) - get(bwStr, idx0);
-        }
-        
-        inline BaseCount get(const BWTString& bwStr, char a, size_t idx) const {
-            // Quick path
-            if((MOD_POWER_2(idx,m_sampleRate)) == 0)
-                return m_values[idx >> m_shift][a];
-
-            // Calculate the nearest sample to this index
-            size_t lower_idx = idx >> m_shift;
-            size_t upper_idx = lower_idx + 1;
-            size_t lower_start = lower_idx << m_shift;
-            size_t upper_start = upper_idx << m_shift;
-            BaseCount sum = 0;
-        
-            // Choose the closest index or force the choice to lower_idx is the upper_idx is invalid
-            if((idx - lower_start < upper_start - idx) || upper_idx == m_values.size()) {
-                for(size_t j = lower_start + 1; j <= idx; ++j) {
-                    if(bwStr.get(j) == a)
-                        ++sum;
-                }
-                return m_values[lower_idx][a] + sum;
-            } else {
-                for(size_t j = idx + 1; j <= upper_start; ++j) {
-                    if(bwStr.get(j) == a)
-                        ++sum;
-                }
-                return m_values[upper_idx][a] - sum;
-            }
-            
-            //return get(bwStr, idx).get(a);
-        }
-
         void set(char a, size_t i, BaseCount s);
         void print() const;
         size_t getByteSize() const;
@@ -94,7 +32,6 @@ class Occurrence {
         // Calculate the amount a value should be shifted to perform a division
         // by divisor. The divisor must be a power of 2
         static int calculateShiftValue(int divisor);
-        void validate(const BWTString& bwStr) const;
 
         friend std::ostream& operator<<(std::ostream& out, const Occurrence& o);
         friend std::istream& operator>>(std::istream& in, Occurrence& o);
