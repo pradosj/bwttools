@@ -9,8 +9,6 @@
 #include <string>
 
 
-typedef uint64_t BaseCount;
-
 //const std::string BWT_ALPHABET("$ACGT");
 
 namespace BWT_ALPHABET {

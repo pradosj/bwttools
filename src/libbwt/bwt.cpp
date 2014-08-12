@@ -12,6 +12,26 @@
 #define OCC(c,i) m_occurrence.get(m_bwStr, (c), (i))
 #define PRED(c) m_predCount.get((c))
 
+
+
+static int calculateShiftValue(int divisor) {
+    assert(divisor > 0);
+    assert(IS_POWER_OF_2(divisor));
+
+    // m_sampleRate is a power of 2, count what bit is set
+    unsigned int v = divisor;
+    unsigned int c = 0; // c accumulates the total bits set in v
+
+    while(v != 1) {
+        v >>= 1;
+        ++c;
+    }
+    assert(1 << c == divisor);
+    return c;
+}
+
+
+
 // Parse a BWT from a file
 bwt::bwt(const std::string& filename, int sampleRate) : m_numStrings(0), 
                                                         m_numSymbols(0), 
@@ -45,8 +65,8 @@ void bwt::append(char b) {
 
 // Fill in the FM-index data structures
 void bwt::initializeFMIndex() {
-    m_smallShiftValue = Occurrence::calculateShiftValue(m_smallSampleRate);
-    m_largeShiftValue = Occurrence::calculateShiftValue(m_largeSampleRate);
+    m_smallShiftValue = calculateShiftValue(m_smallSampleRate);
+    m_largeShiftValue = calculateShiftValue(m_largeSampleRate);
 
     // initialize the marker vectors,
     // LargeMarkers are placed every 2048 bases (by default) containing the absolute count

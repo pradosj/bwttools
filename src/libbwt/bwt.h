@@ -4,17 +4,16 @@
 
 #include "RLUnit.h"
 #include "Alphabet.h"
+#include "FMMarkers.h"
 #include <algorithm>
 #include <vector>
 
 
+// return true if x is a power of 2
+#define IS_POWER_OF_2(x) ((x) & ((x) - 1)) == 0
 
-
-#include "FMMarkers.h"
-#include "Occurrence.h"
-
-
-
+// return the x % y given that y is a power of 2
+#define MOD_POWER_2(x, y) (x) & ((y) - 1)
 
 
 /*! \brief Add run_length of a RLUnit to an AlphaCount, only adding up to max symbols.
@@ -52,6 +51,8 @@ inline size_t subIfMatch(char b, size_t& base_count, RLUnit rl, size_t max) {
     if (rl.value() == b) base_count -= run_len;
     return run_len;
 }
+
+
 
 /*! \class bwt
  *  \brief Run-length encoded Burrows Wheeler transform
@@ -129,10 +130,10 @@ class bwt {
             return absoluteMarker;
         }
 
-        inline BaseCount getPC(char b) const { return m_predCount[b]; }
+        inline AlphaCount64::value_type getPC(char b) const { return m_predCount[b]; }
 
         // Return the number of times char b appears in bwt[0, idx]
-        inline BaseCount getOcc(char b, size_t idx) const {
+        inline AlphaCount64::value_type getOcc(char b, size_t idx) const {
             // The counts in the marker are not inclusive (unlike the Occurrence class)
             // so we increment the index by 1.
             ++idx;
