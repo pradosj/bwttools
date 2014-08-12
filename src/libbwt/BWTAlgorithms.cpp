@@ -24,8 +24,6 @@ BWTInterval BWTAlgorithms::findInterval(const bwt* pBWT, const std::string& w) {
 
 // Return the string from the BWT at idx
 std::string BWTAlgorithms::extractString(const bwt& BWT, size_t idx) {
-    assert(idx < BWT.getNumStrings());
-
     // The range [0,n) in the BWT contains all the terminal
     // symbols for the reads. Search backwards from one of them
     // until the '$' is found gives a full string.

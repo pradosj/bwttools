@@ -1,10 +1,12 @@
-#ifndef RLUNIT_H
-#define RLUNIT_H
+#ifndef RLESTR_H
+#define RLESTR_H
 
 
 #include <cassert>
 #include <cstdint>
-
+#include <vector>
+#include <numeric>
+#include <functional>
 
 /*! \class RLUnit
  *  \brief A run-length encoded unit of the FM-index
@@ -62,5 +64,22 @@ struct RLUnit {
         return code;
     }
 };
+
+
+
+
+struct RLEString:std::vector<RLUnit>{
+    // The total length of the bw string
+    size_t m_numSymbols;
+
+		// Append a symbol to the bw string
+		void append(char b);
+};
+
+
+
+
+
+
 
 #endif

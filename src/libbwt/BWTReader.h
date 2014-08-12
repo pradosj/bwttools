@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 #include "BWTReader.h"
-#include "RLunit.h"
+#include "rlestr.h"
 #include "bwt.h"
 
 

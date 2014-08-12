@@ -2,7 +2,7 @@
 #define BWT_H
 
 
-#include "RLUnit.h"
+#include "rlestr.h"
 #include "Alphabet.h"
 #include "FMMarkers.h"
 #include <algorithm>
@@ -66,8 +66,6 @@ class bwt {
         //
         void initializeFMIndex();
 
-        // Append a symbol to the bw string
-        void append(char b);
 
         inline char operator[](size_t idx) const {
             // Calculate the Marker who's position is not less than idx
@@ -227,8 +225,7 @@ class bwt {
             return getFullOcc(idx1) - getFullOcc(idx0); 
         }
 
-        inline size_t getNumStrings() const { return m_numStrings; } 
-        inline size_t getBWLen() const { return m_numSymbols; }
+        inline size_t getBWLen() const { return m_rlString.m_numSymbols; }
         inline size_t getNumRuns() const { return m_rlString.size(); }
 
         // Return the first letter of the suffix starting at idx
@@ -259,17 +256,11 @@ class bwt {
         AlphaCount64 m_predCount;
         
         // The run-length encoded string
-        std::vector<RLUnit> m_rlString;
+        RLEString m_rlString;
 
         // The marker vector
         std::vector<LargeMarker> m_largeMarkers;
         std::vector<SmallMarker> m_smallMarkers;
-
-        // The number of strings in the collection
-        size_t m_numStrings;
-
-        // The total length of the bw string
-        size_t m_numSymbols;
 
         // The sample rate used for the markers
         size_t m_largeSampleRate;

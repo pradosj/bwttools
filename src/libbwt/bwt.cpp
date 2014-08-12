@@ -33,10 +33,8 @@ static int calculateShiftValue(int divisor) {
 
 
 // Parse a BWT from a file
-bwt::bwt(const std::string& filename, int sampleRate) : m_numStrings(0), 
-                                                        m_numSymbols(0), 
-                                                        m_largeSampleRate(8192),
-                                                        m_smallSampleRate(sampleRate)
+bwt::bwt(const std::string& filename, int sampleRate): m_largeSampleRate(8192),
+                                                       m_smallSampleRate(sampleRate)
 {
     BWTReaderBinary reader(filename);
     reader.read(this);
@@ -44,24 +42,6 @@ bwt::bwt(const std::string& filename, int sampleRate) : m_numStrings(0),
 }
 
 
-//
-void bwt::append(char b) {
-    bool increment = false;
-    if(!m_rlString.empty()) {
-        RLUnit& lastUnit = m_rlString.back();
-        if(lastUnit.value() == b && !lastUnit.isFull()) {
-            ++lastUnit;
-            increment = true;
-        }
-    }
-
-    if(!increment) {
-        // Must add a new unit to the string
-        RLUnit unit(b);
-        m_rlString.push_back(unit);
-    }
-    ++m_numSymbols;
-}
 
 // Fill in the FM-index data structures
 void bwt::initializeFMIndex() {
@@ -73,8 +53,8 @@ void bwt::initializeFMIndex() {
     // of symbols seen up to that point. SmallMarkers are placed every 128 bases with the
     // count over the last 128 symbols. From these relative counts the absolute count
     // every 128 symbols can be interpolated.
-    size_t num_large_markers = getNumRequiredMarkers(m_numSymbols, m_largeSampleRate);
-    size_t num_small_markers = getNumRequiredMarkers(m_numSymbols, m_smallSampleRate);
+    size_t num_large_markers = getNumRequiredMarkers(m_rlString.m_numSymbols, m_largeSampleRate);
+    size_t num_small_markers = getNumRequiredMarkers(m_rlString.m_numSymbols, m_smallSampleRate);
     m_largeMarkers.resize(num_large_markers);
     m_smallMarkers.resize(num_small_markers);
 
@@ -240,10 +220,10 @@ void bwt::printInfo() const {
     printf("\nRLBWT info:\n");
     printf("Large Sample rate: %zu\n", m_largeSampleRate);
     printf("Small Sample rate: %zu\n", m_smallSampleRate);
-    printf("Contains %zu symbols in %zu runs (%1.4lf symbols per run)\n", m_numSymbols, m_rlString.size(), (double)m_numSymbols / m_rlString.size());
+    printf("Contains %zu symbols in %zu runs (%1.4lf symbols per run)\n", m_rlString.m_numSymbols, m_rlString.size(), (double)m_rlString.m_numSymbols / m_rlString.size());
     printf("Marker Memory -- Small Markers: %zu (%.1lf MB) Large Markers: %zu (%.1lf MB)\n", small_m_size, small_m_size / mb, large_m_size, large_m_size / mb);
     printf("Total Memory -- Markers: %zu (%.1lf MB) Str: %zu (%.1lf MB) Misc: %zu Total: %zu (%lf MB)\n", total_marker_size, total_marker_size / mb, bwStr_size, bwStr_size / mb, other_size, total_size, total_mb);
-    printf("N: %zu Bytes per symbol: %lf\n\n", m_numSymbols, (double)total_size / m_numSymbols);
+    printf("N: %zu Bytes per symbol: %lf\n\n", m_rlString.m_numSymbols, (double)total_size / m_rlString.m_numSymbols);
 }
 
 // Print the run length distribution of the BWT
