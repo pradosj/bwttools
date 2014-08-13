@@ -34,23 +34,6 @@ inline size_t sub(AlphaCount64& ac, RLUnit n, size_t max) {
     return count;
 }
 
-/*! \brief Add run_length of a RLUnit to base_count if base b match the value of the RLUnit. Only add up to maxCount symbols. 
- *  \return the number of symbols in the run, up to max
-*/
-inline size_t addIfMatch(char b, size_t& base_count, RLUnit rl, size_t max) {
-    size_t run_len = std::min<decltype(max)>(rl.length(),max);
-    if (rl.value() == b) base_count += run_len;
-    return run_len;
-}
-
-/*! \brief Subtract run_length of a RLUnit to base_count if base b match the value of the RLUnit. Only add up to maxCount symbols. 
- * \return the number of symbols in the run, up to max
-*/
-inline size_t subIfMatch(char b, size_t& base_count, RLUnit rl, size_t max) {
-    size_t run_len = std::min<decltype(max)>(rl.length(),max);
-    if (rl.value() == b) base_count -= run_len;
-    return run_len;
-}
 
 
 
@@ -130,26 +113,13 @@ class bwt {
 
         inline AlphaCount64::value_type getPC(char b) const { return m_predCount[b]; }
 
-        // Return the number of times char b appears in bwt[0, idx]
-        inline AlphaCount64::value_type getOcc(char b, size_t idx) const {
-            // The counts in the marker are not inclusive (unlike the Occurrence class)
-            // so we increment the index by 1.
-            ++idx;
 
-            const LargeMarker& marker = getNearestMarker(idx);
-            size_t current_position = marker.getActualPosition();
-            bool forwards = current_position < idx;
-            //printf("cp: %zu idx: %zu f: %d dist: %d\n", current_position, idx, forwards, (int)idx - (int)current_position);
 
-            size_t running_count = marker.counts[b];
-            size_t symbol_index = marker.unitIndex; 
 
-            if(forwards)
-                accumulateForwards(b, running_count, symbol_index, current_position, idx);
-            else
-                accumulateBackwards(b, running_count, symbol_index, current_position, idx);
-            return running_count;
-        }
+
+
+
+
 
         // Return the number of times each symbol in the alphabet appears in bwt[0, idx]
         inline AlphaCount64 getFullOcc(size_t idx) const { 
@@ -194,37 +164,11 @@ class bwt {
                 ++currentUnitIndex;
             }
         }
-
-        // Adds to the count of symbol b in the range [targetPosition, currentPosition)
-        // Precondition: currentPosition <= targetPosition
-        inline void accumulateBackwards(char b, size_t& running_count, size_t currentUnitIndex, size_t currentPosition, const size_t targetPosition) const {
-            // Search backwards (towards 0) until idx is found
-            while(currentPosition != targetPosition) {
-                size_t diff = currentPosition - targetPosition;
-                assert(currentUnitIndex != 0);
-                --currentUnitIndex;
-                currentPosition -= subIfMatch(b, running_count, m_rlString[currentUnitIndex], diff);
-            }
-        }
-
-        // Adds to the count of symbol b in the range [currentPosition, targetPosition)
-        // Precondition: currentPosition <= targetPosition
-        inline void accumulateForwards(char b, size_t& running_count, size_t currentUnitIndex, size_t currentPosition, const size_t targetPosition) const {
-            // Search backwards (towards 0) until idx is found
-            while(currentPosition != targetPosition) {
-                size_t diff = targetPosition - currentPosition;
-                assert(currentUnitIndex != m_rlString.size());
-                const RLUnit& curr_unit = m_rlString[currentUnitIndex];
-                currentPosition += addIfMatch(b, running_count, curr_unit, diff);
-                ++currentUnitIndex;
-            }
-        }
+        
+        
 
         // Return the number of times each symbol in the alphabet appears ins bwt[idx0, idx1]
-        inline AlphaCount64 getOccDiff(size_t idx0, size_t idx1) const { 
-            return getFullOcc(idx1) - getFullOcc(idx0); 
-        }
-
+        inline AlphaCount64 getOccDiff(size_t idx0, size_t idx1) const {return getFullOcc(idx1) - getFullOcc(idx0);}
         inline size_t getBWLen() const { return m_rlString.m_numSymbols; }
         inline size_t getNumRuns() const { return m_rlString.size(); }
 

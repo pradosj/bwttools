@@ -27,8 +27,8 @@ namespace BWTAlgorithms {
 // If the interval corresponds to string S, it will be updated for string bS
 inline void updateInterval(BWTInterval& interval, char b, const bwt* pBWT) {
     size_t pb = pBWT->getPC(b);
-    interval.lower = pb + pBWT->getOcc(b, interval.lower - 1);
-    interval.upper = pb + pBWT->getOcc(b, interval.upper) - 1;
+    interval.lower = pb + pBWT->getFullOcc(interval.lower - 1)[b];
+    interval.upper = pb + pBWT->getFullOcc(interval.upper)[b] - 1;
 }
 
 // get the interval(s) in pBWT that corresponds to the string w using a backward search algorithm
@@ -41,7 +41,7 @@ BWTInterval findInterval(const bwt* pBWT, const std::string& w);
 // Initialize the interval of index idx to be the range containining all the b suffixes
 inline void initInterval(BWTInterval& interval, char b, const bwt* pB) {
     interval.lower = pB->getPC(b);
-    interval.upper = interval.lower + pB->getOcc(b, pB->getBWLen() - 1) - 1;
+    interval.upper = interval.lower + pB->getFullOcc(pB->getBWLen() - 1)[b] - 1;
 }
 
 // Return the counts of the bases between the lower and upper interval in pBWT
