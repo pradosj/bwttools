@@ -16,23 +16,6 @@
 #define MOD_POWER_2(x, y) (x) & ((y) - 1)
 
 
-/*! \brief Add run_length of a RLUnit to an AlphaCount, only adding up to max symbols.
- *  \return the number of symbols added
- */
-inline size_t add(AlphaCount64& ac, RLUnit n, size_t max) {
-    size_t count = std::min<decltype(max)>(n.length(),max);
-    ac[n.value()] += count;
-    return count;
-}
-
-/*! \brief Subtract run_length of a RLUnit from an AlphaCount, only subtracting up to max symbols
- *  \return the number of symbols subtracted
- */
-inline size_t sub(AlphaCount64& ac, RLUnit n, size_t max) {
-    size_t count = std::min<decltype(max)>(n.length(),max);
-    ac[n.value()] -= count;
-    return count;
-}
 
 
 
@@ -147,9 +130,11 @@ class bwt {
             // Search backwards (towards 0) until idx is found
             while(currentPosition != targetPosition) {
                 size_t diff = currentPosition - targetPosition;
-                assert(currentUnitIndex != 0);
+						    size_t count = std::min<decltype(diff)>(n.length(),diff);
+                assert(currentUnitIndex >= 0);
                 --currentUnitIndex;
-                currentPosition -= sub(running_count, m_rlString[currentUnitIndex], diff);
+    						running_count[m_rlString[currentUnitIndex].value()] -= count;
+                currentPosition -= count;
             }
         }
 
@@ -159,8 +144,10 @@ class bwt {
             // Search backwards (towards 0) until idx is found
             while(currentPosition != targetPosition) {
                 size_t diff = targetPosition - currentPosition;
-                assert(currentUnitIndex != m_rlString.size());
-                currentPosition += add(running_count, m_rlString[currentUnitIndex], diff);
+                size_t count = std::min<decltype(max)>(n.length(),diff);
+                assert(currentUnitIndex < m_rlString.size());
+                running_count[m_rlString[currentUnitIndex].value()] += count;
+                currentPosition += count;
                 ++currentUnitIndex;
             }
         }
