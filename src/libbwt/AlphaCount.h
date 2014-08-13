@@ -46,17 +46,6 @@ class AlphaCount: public std::array<Storage,AlphabetSize> {
             std::transform(this->begin(),this->end(),other.begin(),this->begin(),std::plus<Storage>());
             return *this;
         }
-
-        
-        // I/O
-        friend std::ostream& operator<<(std::ostream& out, const AlphaCount<Storage>& ac) {
-            std::copy(ac.begin(), ac.end(), std::ostream_iterator<Storage>(out, " "));
-            return out;
-        }
-        friend std::istream& operator>>(std::istream& in, AlphaCount<Storage>& ac) {
-        		for(auto &e:ac) in >> e;
-            return in;
-        }
 };
 
 // Typedef commonly used AlphaCounts
