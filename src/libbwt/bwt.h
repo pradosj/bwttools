@@ -9,9 +9,6 @@
 #include <inttypes.h>
 
 
-// return the x % y given that y is a power of 2
-#define MOD_POWER_2(x, y) (x) & ((y) - 1)
-
 
 namespace bwt {
 	
@@ -32,6 +29,17 @@ namespace bwt {
 	    inline uint64_t size() const {return empty()?0:upper-lower+1;}	
 	};
 
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
 	
 	/*! \class fm_index
 	 *  \brief Run-length encoded Burrows Wheeler transform
@@ -56,11 +64,11 @@ namespace bwt {
 	            while(current_position > idx) {
 	                assert(symbol_index != 0);
 	                symbol_index -= 1;
-	                current_position -= m_rlString[symbol_index].length();
+	                current_position -= m_rlString.runs[symbol_index].length();
 	            }
 	
 	            // symbol_index is now the index of the run containing the idx symbol
-	            const rle_unit& unit = m_rlString[symbol_index];
+	            const rle_unit& unit = m_rlString.runs[symbol_index];
 	            assert(current_position <= idx && current_position + unit.length() >= idx);
 	            return unit.value();
 	        }
@@ -177,8 +185,8 @@ namespace bwt {
 	                size_t diff = currentPosition - targetPosition;
 	                assert(currentUnitIndex >= 0);
 	                --currentUnitIndex;
-	                size_t count = std::min<size_t>(m_rlString[currentUnitIndex].length(),diff);                
-	    						running_count[m_rlString[currentUnitIndex].value()] -= count;
+	                size_t count = std::min<size_t>(m_rlString.runs[currentUnitIndex].length(),diff);                
+	    						running_count[m_rlString.runs[currentUnitIndex].value()] -= count;
 	                currentPosition -= count;
 	            }
 	        }
@@ -189,9 +197,9 @@ namespace bwt {
 	            // Search backwards (towards 0) until idx is found
 	            while(currentPosition != targetPosition) {
 	                size_t diff = targetPosition - currentPosition;
-	                assert(currentUnitIndex < m_rlString.size());
-	                size_t count = std::min<size_t>(m_rlString[currentUnitIndex].length(),diff);
-	                running_count[m_rlString[currentUnitIndex].value()] += count;
+	                assert(currentUnitIndex < m_rlString.runs.size());
+	                size_t count = std::min<size_t>(m_rlString.runs[currentUnitIndex].length(),diff);
+	                running_count[m_rlString.runs[currentUnitIndex].value()] += count;
 	                currentPosition += count;
 	                ++currentUnitIndex;
 	            }

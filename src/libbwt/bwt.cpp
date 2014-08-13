@@ -51,9 +51,9 @@ namespace bwt {
 		    size_t running_total = 0;
 		    AlphaCount64 running_ac;
 		
-		    for(size_t i = 0; i < m_rlString.size(); ++i) {
+		    for(size_t i = 0; i < m_rlString.runs.size(); ++i) {
 		        // Update the count and advance the running total
-		        rle_unit& unit = m_rlString[i];
+		        rle_unit& unit = m_rlString.runs[i];
 		
 		        char symbol = unit.value();
 		        uint8_t run_len = unit.length();
@@ -61,7 +61,7 @@ namespace bwt {
 		        running_total += run_len;
 		
 		        size_t curr_unit_index = i + 1;
-		        bool last_symbol = i == m_rlString.size() - 1;
+		        bool last_symbol = i == m_rlString.runs.size() - 1;
 		
 		        // Check whether to place a new large marker
 		        bool place_last_large_marker = last_symbol && curr_large_marker_index < num_large_markers;
