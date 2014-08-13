@@ -10,6 +10,34 @@
 #include <BWTAlgorithms.h>
 
 
+
+const std::string alphabet("$ACGT");
+
+inline std::string reverse(const std::string& str) {
+	std::string rstr(str);
+  std::reverse(rstr.begin(),rstr.end());
+  return(rstr);
+}
+
+inline std::string complement(std::string str) {
+    auto complement_bp = [](char bp) -> char {
+    	switch(bp) {
+        case 'A':return 'T';
+        case 'C':return 'G';
+        case 'G':return 'C';
+        case 'T':return 'A';
+        case 'N':return 'N';
+        default:
+            assert(false && "Unknown base!");
+            return 'N';
+			};
+    };
+    std::transform(str.begin(), str.end(), str.begin(), complement_bp);
+    return(str);
+}
+
+
+
 //
 // Getopt
 //
@@ -81,7 +109,7 @@ void parseKmerCountOptions(int argc, char* argv[]) {
 // Stack structure used in the depth first search of kmers
 struct stack_elt_t {
     size_t str_sz;
-    char bp;
+    uint8_t bp;
     BWTInterval range;
     stack_elt_t(size_t strsz,char bp,const BWTInterval& range):str_sz(strsz),bp(bp),range(range){}
 };
@@ -94,8 +122,8 @@ void traverse_kmer(size_t n, const bwt** pBWTs, unsigned int k) {
     std::string str; // string storing the current path
 
     // Intitialize the search with root elements
-    for(size_t i = 1; i < BWT_ALPHABET::ALPHABET_SIZE; ++i) {
-        stack_elt_t e(str.size(),BWT_ALPHABET::RANK_ALPHABET[i],pBWTs[0]->initInterval(BWT_ALPHABET::RANK_ALPHABET[i]));
+    for(uint8_t i = 1; i < alphabet.size(); ++i) {
+        stack_elt_t e(str.size(),i,pBWTs[0]->initInterval(i));
         if (e.range.isValid()) stack.push(e);
     }
 
@@ -105,7 +133,7 @@ void traverse_kmer(size_t n, const bwt** pBWTs, unsigned int k) {
         stack_elt_t top = stack.top();
         stack.pop();
         str.resize(top.str_sz);
-        str.push_back(top.bp);
+        str.push_back(alphabet[top.bp]);
         if (str.length()>=k) {
             // we found a kmer, retreive the number of occurence
             std::string seq(reverse(str));
@@ -113,7 +141,7 @@ void traverse_kmer(size_t n, const bwt** pBWTs, unsigned int k) {
 
             // look for the count of its reverse complement
             std::string seq_rc(complement(str));
-            BWTInterval range_rc;// = BWTAlgorithms::findInterval(pBWTs[0],seq_rc);
+            BWTInterval range_rc = BWTAlgorithms::findInterval(*pBWTs[0],seq_rc);
             int64_t seq_rc_count = range_rc.isValid()?range_rc.size():0;
 
             // print the current kmer if canonical
@@ -134,8 +162,8 @@ void traverse_kmer(size_t n, const bwt** pBWTs, unsigned int k) {
             }
         } else {
             // not yet a suffix of size k, push next candidates
-            for(size_t i = 1; i < BWT_ALPHABET::ALPHABET_SIZE; ++i) {
-                stack_elt_t e(str.size(),BWT_ALPHABET::RANK_ALPHABET[i],top.range);
+            for(size_t i = 1; i < alphabet.size(); ++i) {
+                stack_elt_t e(str.size(),i,top.range);
                 pBWTs[0]->updateInterval(e.range,e.bp);
                 if (e.range.isValid()) stack.push(e);
             }

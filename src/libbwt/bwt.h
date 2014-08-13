@@ -3,7 +3,6 @@
 
 
 #include "rlestr.h"
-#include "Alphabet.h"
 #include "FMMarkers.h"
 #include "BWTInterval.h"
 #include <algorithm>
@@ -12,7 +11,6 @@
 
 // return the x % y given that y is a power of 2
 #define MOD_POWER_2(x, y) (x) & ((y) - 1)
-
 
 
 

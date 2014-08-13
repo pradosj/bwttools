@@ -36,8 +36,9 @@ std::string extractString(const bwt& BWT, size_t idx) {
         if (b == '$') break;
         out.push_back(b);
         BWT.updateInterval(interval, b);
-    } 
-    return reverse(out);
+    }
+    std::reverse(out.begin(),out.end());
+    return out;
 }
 
 

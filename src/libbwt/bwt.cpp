@@ -120,7 +120,7 @@ void bwt::initializeFMIndex() {
 
             // Set the 8bit AlphaCounts as the sum since the last large (superblock) marker
             AlphaCount16 smallAC;
-            for(size_t j = 0; j < BWT_ALPHABET::ALPHABET_SIZE; ++j) {
+            for(size_t j = 0; j < smallAC.size(); ++j) {
                 size_t v = running_ac[j] - prev_large_marker.counts[j];
                 if(v > std::numeric_limits<AlphaCount16::value_type>::max()) {
                     std::cerr << "Error: Number of symbols in occurrence array block " << curr_small_marker_index 
