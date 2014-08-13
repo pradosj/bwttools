@@ -11,14 +11,14 @@
 struct BWTInterval {
     // Functions
     BWTInterval() : lower(0), upper(0) {}
-    BWTInterval(int64_t l, int64_t u) : lower(l), upper(u) {}
+    BWTInterval(uint64_t l, uint64_t u) : lower(l), upper(u) {}
 
     inline bool isValid() const {return lower <= upper;}
-    inline int64_t size() const {return isValid()?upper-lower+1:0;}
+    inline uint64_t size() const {return isValid()?upper-lower+1:0;}
 
     // Data
-    int64_t lower;
-    int64_t upper;
+    uint64_t lower;
+    uint64_t upper;
 };
 
 
