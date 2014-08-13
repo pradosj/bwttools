@@ -11,7 +11,8 @@
 	
 	
 namespace bwt {
-	
+
+
 	
 	/*! \class fm_index
 	 *  \brief Run-length encoded Burrows Wheeler transform
@@ -41,6 +42,13 @@ namespace bwt {
 	            const rle_unit& unit = m_rlString.runs[symbol_index];
 	            assert(current_position <= idx && current_position + unit.length() >= idx);
 	            return unit.value();
+	        }
+	        
+	        
+	        // Return the first letter of the suffix starting at idx
+	        inline uint8_t getF(uint64_t idx) const {
+	        		auto i = std::lower_bound(m_predCount.begin(),m_predCount.end(),idx,std::less_equal<uint64_t>());
+	            return std::distance(m_predCount.begin(),i);
 	        }
 	        
 	        
@@ -88,16 +96,44 @@ namespace bwt {
 	            return running_count;
 	        }
 	
+
 	        
-	
-	        // Return the first letter of the suffix starting at idx
-	        inline uint8_t getF(uint64_t idx) const {
-	        		auto i = std::lower_bound(m_predCount.begin(),m_predCount.end(),idx,std::less_equal<uint64_t>());
-	            return std::distance(m_predCount.begin(),i);
-	        }
-	
-	        // IO
-	        friend class BWTReaderBinary;
+
+					// get the interval(s) in pBWT that corresponds to the string w using a backward search algorithm
+					// Find the interval in pBWT corresponding to w
+					// If w does not exist in the BWT, the interval 
+					// coordinates [l, u] will be such that l > u
+					bwt::interval findInterval(const std::string& w) const {
+//TODO: fix the interface: can we accept strings as parameters ?
+							if (w.size()<1) return bwt::interval();
+					    bwt::interval range = initInterval(w.back());
+					    for(auto i=w.rbegin()+1;i!=w.rend();i++) {
+					        updateInterval(range,*i);
+					        if (range.empty()) return range;
+					    }
+					    return range;
+					}
+					
+					// Return the string from the BWT at idx
+					std::string extractString(size_t idx) const {
+//TODO: fix the interface: can return strings ?
+					    // The range [0,n) in the BWT contains all the terminal
+					    // symbols for the reads. Search backwards from one of them
+					    // until the '$' is found gives a full string.
+					    std::string out;
+					    bwt::interval range(idx, idx);
+					    while(1) {
+					        assert(!range.empty());
+					        uint8_t b = symbol(range.lower);
+					        if (b == 0) break;
+					        out.push_back(b);
+					        updateInterval(range, b);
+					    }
+					    std::reverse(out.begin(),out.end());
+					    return out;
+					}
+					
+
 	
 	    private:
 	        // Default constructor is not allowed
@@ -191,6 +227,8 @@ namespace bwt {
 	        int m_smallShift;
 	        int m_largeShift;	
 	};
+
+	
 	
 };
 
