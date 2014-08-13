@@ -83,7 +83,6 @@ struct stack_elt_t {
     size_t str_sz;
     char bp;
     BWTInterval range;
-    stack_elt_t(size_t strsz,char bp):str_sz(strsz),bp(bp){}
     stack_elt_t(size_t strsz,char bp,const BWTInterval& range):str_sz(strsz),bp(bp),range(range){}
 };
 
@@ -96,8 +95,7 @@ void traverse_kmer(size_t n, const bwt** pBWTs, unsigned int k) {
 
     // Intitialize the search with root elements
     for(size_t i = 1; i < BWT_ALPHABET::ALPHABET_SIZE; ++i) {
-        stack_elt_t e(str.size(),BWT_ALPHABET::RANK_ALPHABET[i]);
-        BWTAlgorithms::initInterval(e.range,e.bp,pBWTs[0]);
+        stack_elt_t e(str.size(),BWT_ALPHABET::RANK_ALPHABET[i],pBWTs[0]->initInterval(BWT_ALPHABET::RANK_ALPHABET[i]));
         if (e.range.isValid()) stack.push(e);
     }
 
@@ -138,7 +136,7 @@ void traverse_kmer(size_t n, const bwt** pBWTs, unsigned int k) {
             // not yet a suffix of size k, push next candidates
             for(size_t i = 1; i < BWT_ALPHABET::ALPHABET_SIZE; ++i) {
                 stack_elt_t e(str.size(),BWT_ALPHABET::RANK_ALPHABET[i],top.range);
-                BWTAlgorithms::updateInterval(e.range,e.bp,pBWTs[0]);
+                pBWTs[0]->updateInterval(e.range,e.bp);
                 if (e.range.isValid()) stack.push(e);
             }
         }

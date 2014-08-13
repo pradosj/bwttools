@@ -5,6 +5,7 @@
 #include "rlestr.h"
 #include "Alphabet.h"
 #include "FMMarkers.h"
+#include "BWTInterval.h"
 #include <algorithm>
 #include <vector>
 
@@ -29,11 +30,10 @@ class bwt {
         // Constructors
         bwt(const std::string& filename, int sampleRate = 128);
 
-        //
-        void initializeFMIndex();
+				inline size_t getBWLen() const { return m_rlString.m_numSymbols; }
+				inline size_t getNumRuns() const { return m_rlString.size(); }
 
-
-        inline char operator[](size_t idx) const {
+        inline uint8_t symbol(size_t idx) const {
             // Calculate the Marker who's position is not less than idx
             const LargeMarker& upper = getUpperMarker(idx);
             size_t current_position = upper.getActualPosition();
@@ -53,12 +53,23 @@ class bwt {
             assert(current_position <= idx && current_position + unit.length() >= idx);
             return unit.value();
         }
+        
+        
 
+				// Initialize the interval of index idx to be the range containining all the b suffixes
+				inline BWTInterval initInterval(const uint8_t b) const {
+						return BWTInterval(getPC(b),getPC(b) + getFullOcc(getBWLen() - 1)[b] - 1);
+				}
+				
+				// Update the given interval using backwards search
+				// If the interval corresponds to string S, it will be updated for string bS
+				inline void updateInterval(BWTInterval& interval, uint8_t b) const {
+				    size_t pb = getPC(b);
+				    interval.lower = pb + getFullOcc(interval.lower - 1)[b];
+				    interval.upper = pb + getFullOcc(interval.upper)[b] - 1;
+				}
 
-        inline AlphaCount64::value_type getPC(char b) const { return m_predCount[b]; }
-
-
-
+        inline AlphaCount64::value_type getPC(uint8_t b) const { return m_predCount[b]; }
 
 
 
@@ -85,40 +96,7 @@ class bwt {
             return running_count;
         }
 
-        // Adds to the count of symbol b in the range [targetPosition, currentPosition)
-        // Precondition: currentPosition <= targetPosition
-        inline void accumulateBackwards(AlphaCount64& running_count, size_t currentUnitIndex, size_t currentPosition, const size_t targetPosition) const {
-            // Search backwards (towards 0) until idx is found
-            while(currentPosition != targetPosition) {
-                size_t diff = currentPosition - targetPosition;
-                assert(currentUnitIndex >= 0);
-                --currentUnitIndex;
-                size_t count = std::min<size_t>(m_rlString[currentUnitIndex].length(),diff);                
-    						running_count[m_rlString[currentUnitIndex].value()] -= count;
-                currentPosition -= count;
-            }
-        }
-
-        // Adds to the count of symbol b in the range [currentPosition, targetPosition)
-        // Precondition: currentPosition <= targetPosition
-        inline void accumulateForwards(AlphaCount64& running_count, size_t currentUnitIndex, size_t currentPosition, const size_t targetPosition) const {
-            // Search backwards (towards 0) until idx is found
-            while(currentPosition != targetPosition) {
-                size_t diff = targetPosition - currentPosition;
-                assert(currentUnitIndex < m_rlString.size());
-                size_t count = std::min<size_t>(m_rlString[currentUnitIndex].length(),diff);
-                running_count[m_rlString[currentUnitIndex].value()] += count;
-                currentPosition += count;
-                ++currentUnitIndex;
-            }
-        }
         
-        
-
-        // Return the number of times each symbol in the alphabet appears ins bwt[idx0, idx1]
-        inline AlphaCount64 getOccDiff(size_t idx0, size_t idx1) const {return getFullOcc(idx1) - getFullOcc(idx0);}
-        inline size_t getBWLen() const { return m_rlString.m_numSymbols; }
-        inline size_t getNumRuns() const { return m_rlString.size(); }
 
         // Return the first letter of the suffix starting at idx
         inline char getF(size_t idx) const {
@@ -141,6 +119,9 @@ class bwt {
         // Default constructor is not allowed
         bwt() {}
         
+        //
+        void initializeFMIndex();
+
         // Calculate the number of markers to place
         size_t getNumRequiredMarkers(size_t n, size_t d) const;
 
@@ -183,6 +164,38 @@ class bwt {
             size_t target_small_idx = (position >> m_smallShiftValue) + 1;
             return getInterpolatedMarker(target_small_idx);
         }
+
+
+
+
+        // Adds to the count of symbol b in the range [targetPosition, currentPosition)
+        // Precondition: currentPosition <= targetPosition
+        inline void accumulateBackwards(AlphaCount64& running_count, size_t currentUnitIndex, size_t currentPosition, const size_t targetPosition) const {
+            // Search backwards (towards 0) until idx is found
+            while(currentPosition != targetPosition) {
+                size_t diff = currentPosition - targetPosition;
+                assert(currentUnitIndex >= 0);
+                --currentUnitIndex;
+                size_t count = std::min<size_t>(m_rlString[currentUnitIndex].length(),diff);                
+    						running_count[m_rlString[currentUnitIndex].value()] -= count;
+                currentPosition -= count;
+            }
+        }
+
+        // Adds to the count of symbol b in the range [currentPosition, targetPosition)
+        // Precondition: currentPosition <= targetPosition
+        inline void accumulateForwards(AlphaCount64& running_count, size_t currentUnitIndex, size_t currentPosition, const size_t targetPosition) const {
+            // Search backwards (towards 0) until idx is found
+            while(currentPosition != targetPosition) {
+                size_t diff = targetPosition - currentPosition;
+                assert(currentUnitIndex < m_rlString.size());
+                size_t count = std::min<size_t>(m_rlString[currentUnitIndex].length(),diff);
+                running_count[m_rlString[currentUnitIndex].value()] += count;
+                currentPosition += count;
+                ++currentUnitIndex;
+            }
+        }
+ 
 
 
         // The C(a) array
