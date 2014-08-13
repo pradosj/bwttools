@@ -61,7 +61,7 @@ namespace bwt {
 					    interval.upper = pb + getFullOcc(interval.upper)[b] - 1;
 					}
 	
-	        inline AlphaCount64::value_type getPC(uint8_t b) const { return m_predCount[b]; }
+	        inline alpha_count64::value_type getPC(uint8_t b) const { return m_predCount[b]; }
 
 
 
@@ -69,7 +69,7 @@ namespace bwt {
 	
 	
 	        // Return the number of times each symbol in the alphabet appears in bwt[0, idx]
-	        inline AlphaCount64 getFullOcc(size_t idx) const { 
+	        inline alpha_count64 getFullOcc(size_t idx) const { 
 	            // The counts in the marker are not inclusive (unlike the Occurrence class)
 	            // so we increment the index by 1.
 	            ++idx;
@@ -78,7 +78,7 @@ namespace bwt {
 	            size_t current_position = marker.getActualPosition();
 	            bool forwards = current_position < idx;
 	
-	            AlphaCount64 running_count = marker.counts;
+	            auto running_count = marker.counts;
 	            size_t symbol_index = marker.unitIndex; 
 	
 	            if(forwards)
@@ -149,7 +149,7 @@ namespace bwt {
 	
 	        // Adds to the count of symbol b in the range [targetPosition, currentPosition)
 	        // Precondition: currentPosition <= targetPosition
-	        inline void accumulateBackwards(AlphaCount64& running_count, size_t currentUnitIndex, size_t currentPosition, const size_t targetPosition) const {
+	        inline void accumulateBackwards(alpha_count64& running_count, size_t currentUnitIndex, size_t currentPosition, const size_t targetPosition) const {
 	            // Search backwards (towards 0) until idx is found
 	            while(currentPosition != targetPosition) {
 	                size_t diff = currentPosition - targetPosition;
@@ -163,7 +163,7 @@ namespace bwt {
 	
 	        // Adds to the count of symbol b in the range [currentPosition, targetPosition)
 	        // Precondition: currentPosition <= targetPosition
-	        inline void accumulateForwards(AlphaCount64& running_count, size_t currentUnitIndex, size_t currentPosition, const size_t targetPosition) const {
+	        inline void accumulateForwards(alpha_count64& running_count, size_t currentUnitIndex, size_t currentPosition, const size_t targetPosition) const {
 	            // Search backwards (towards 0) until idx is found
 	            while(currentPosition != targetPosition) {
 	                size_t diff = targetPosition - currentPosition;
@@ -178,7 +178,7 @@ namespace bwt {
 	
 	
 	        // The C(a) array
-	        AlphaCount64 m_predCount;
+	        alpha_count64 m_predCount;
 	        
 	        // The run-length encoded string
 	        rle_string m_rlString;

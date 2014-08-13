@@ -49,7 +49,7 @@ namespace bwt {
 		
 		    size_t prev_small_marker_unit_index = 0;
 		    size_t running_total = 0;
-		    AlphaCount64 running_ac;
+		    alpha_count64 running_ac;
 		
 		    for(size_t i = 0; i < m_rlString.runs.size(); ++i) {
 		        // Update the count and advance the running total
@@ -115,12 +115,12 @@ namespace bwt {
 		            LargeMarker& prev_large_marker = m_largeMarkers[large_marker_index];
 		
 		            // Set the 8bit AlphaCounts as the sum since the last large (superblock) marker
-		            AlphaCount16 smallAC;
+		            alpha_count16 smallAC;
 		            for(size_t j = 0; j < smallAC.size(); ++j) {
 		                size_t v = running_ac[j] - prev_large_marker.counts[j];
-		                if(v > std::numeric_limits<AlphaCount16::value_type>::max()) {
+		                if(v > std::numeric_limits<alpha_count16::value_type>::max()) {
 		                    std::cerr << "Error: Number of symbols in occurrence array block " << curr_small_marker_index 
-		                              << " exceeds the maximum value (" << v << " > " << std::numeric_limits<AlphaCount16::value_type>::max() << ")\n";
+		                              << " exceeds the maximum value (" << v << " > " << std::numeric_limits<alpha_count16::value_type>::max() << ")\n";
 		                    exit(EXIT_FAILURE);
 		                }
 		                smallAC[j] = v;

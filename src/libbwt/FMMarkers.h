@@ -25,7 +25,7 @@ struct LargeMarker {
     bool operator==(const LargeMarker& rhs) {return counts==rhs.counts && unitIndex == rhs.unitIndex;}
 
     // The number of times each symbol has been seen up to this marker
-    AlphaCount64 counts; 
+    alpha_count64 counts; 
 
     // The index in the RLVector of the run that starts after
     // this marker. That is, if C = getActualPosition(), then
@@ -45,7 +45,7 @@ struct SmallMarker {
     inline size_t getCountSum() const {return counts.sum();}
 
     // The number of times each symbol has been seen up to this marker
-    AlphaCount16 counts; 
+    alpha_count16 counts; 
 
     // The number of RL units in this block
     uint16_t unitCount;
