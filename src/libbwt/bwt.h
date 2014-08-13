@@ -54,45 +54,6 @@ class bwt {
             return unit.value();
         }
 
-        // Get the index of the marker nearest to position in the bwt
-        inline size_t getNearestMarkerIdx(size_t position, size_t sampleRate, size_t shiftValue) const {
-            size_t offset = MOD_POWER_2(position, sampleRate); // equivalent to position % sampleRate
-            size_t baseIdx = position >> shiftValue;
-            return (offset < (sampleRate >> 1))?baseIdx:baseIdx+1;
-        }        
-
-        // Get the interpolated marker with position closest to position
-        inline LargeMarker getNearestMarker(size_t position) const {
-            size_t nearest_small_idx = getNearestMarkerIdx(position, m_smallSampleRate, m_smallShiftValue);
-            return getInterpolatedMarker(nearest_small_idx);
-        }
-
-        // Get the greatest interpolated marker whose position is less than or equal to position
-        inline LargeMarker getLowerMarker(size_t position) const {
-            size_t target_small_idx = position >> m_smallShiftValue;
-            return getInterpolatedMarker(target_small_idx);
-        }
-
-        // Get the lowest interpolated marker whose position is strictly greater than position
-        inline LargeMarker getUpperMarker(size_t position) const {
-            size_t target_small_idx = (position >> m_smallShiftValue) + 1;
-            return getInterpolatedMarker(target_small_idx);
-        }
-
-        // Return a LargeMarker with values that are interpolated by adding
-        // the relative count nearest to the requested position to the last
-        // LargeMarker
-        inline LargeMarker getInterpolatedMarker(size_t target_small_idx) const {
-            // Calculate the position of the LargeMarker closest to the target SmallMarker
-            size_t target_position = target_small_idx << m_smallShiftValue;
-            size_t curr_large_idx = target_position >> m_largeShiftValue;
-
-            LargeMarker absoluteMarker = m_largeMarkers[curr_large_idx];
-            const SmallMarker& relative = m_smallMarkers[target_small_idx];
-            absoluteMarker.counts += relative.counts;
-            absoluteMarker.unitIndex += relative.unitCount;
-            return absoluteMarker;
-        }
 
         inline AlphaCount64::value_type getPC(char b) const { return m_predCount[b]; }
 
@@ -130,9 +91,9 @@ class bwt {
             // Search backwards (towards 0) until idx is found
             while(currentPosition != targetPosition) {
                 size_t diff = currentPosition - targetPosition;
-						    size_t count = std::min<decltype(diff)>(n.length(),diff);
                 assert(currentUnitIndex >= 0);
                 --currentUnitIndex;
+                size_t count = std::min<size_t>(m_rlString[currentUnitIndex].length(),diff);                
     						running_count[m_rlString[currentUnitIndex].value()] -= count;
                 currentPosition -= count;
             }
@@ -144,8 +105,8 @@ class bwt {
             // Search backwards (towards 0) until idx is found
             while(currentPosition != targetPosition) {
                 size_t diff = targetPosition - currentPosition;
-                size_t count = std::min<decltype(max)>(n.length(),diff);
                 assert(currentUnitIndex < m_rlString.size());
+                size_t count = std::min<size_t>(m_rlString[currentUnitIndex].length(),diff);
                 running_count[m_rlString[currentUnitIndex].value()] += count;
                 currentPosition += count;
                 ++currentUnitIndex;
@@ -182,6 +143,47 @@ class bwt {
         
         // Calculate the number of markers to place
         size_t getNumRequiredMarkers(size_t n, size_t d) const;
+
+        // Get the index of the marker nearest to position in the bwt
+        inline size_t getNearestMarkerIdx(size_t position, size_t sampleRate, size_t shiftValue) const {
+            size_t offset = MOD_POWER_2(position, sampleRate); // equivalent to position % sampleRate
+            size_t baseIdx = position >> shiftValue;
+            return (offset < (sampleRate >> 1))?baseIdx:baseIdx+1;
+        }
+
+        // Return a LargeMarker with values that are interpolated by adding
+        // the relative count nearest to the requested position to the last
+        // LargeMarker
+        inline LargeMarker getInterpolatedMarker(size_t target_small_idx) const {
+            // Calculate the position of the LargeMarker closest to the target SmallMarker
+            size_t target_position = target_small_idx << m_smallShiftValue;
+            size_t curr_large_idx = target_position >> m_largeShiftValue;
+
+            LargeMarker absoluteMarker = m_largeMarkers[curr_large_idx];
+            const SmallMarker& relative = m_smallMarkers[target_small_idx];
+            absoluteMarker.counts += relative.counts;
+            absoluteMarker.unitIndex += relative.unitCount;
+            return absoluteMarker;
+        }
+
+        // Get the interpolated marker with position closest to position
+        inline LargeMarker getNearestMarker(size_t position) const {
+            size_t nearest_small_idx = getNearestMarkerIdx(position, m_smallSampleRate, m_smallShiftValue);
+            return getInterpolatedMarker(nearest_small_idx);
+        }
+
+        // Get the greatest interpolated marker whose position is less than or equal to position
+        inline LargeMarker getLowerMarker(size_t position) const {
+            size_t target_small_idx = position >> m_smallShiftValue;
+            return getInterpolatedMarker(target_small_idx);
+        }
+
+        // Get the lowest interpolated marker whose position is strictly greater than position
+        inline LargeMarker getUpperMarker(size_t position) const {
+            size_t target_small_idx = (position >> m_smallShiftValue) + 1;
+            return getInterpolatedMarker(target_small_idx);
+        }
+
 
         // The C(a) array
         AlphaCount64 m_predCount;
