@@ -68,12 +68,29 @@ struct RLUnit {
 
 
 
-struct RLEString:std::vector<RLUnit>{
+struct RLEString : std::vector<RLUnit>{
     // The total length of the bw string
     size_t m_numSymbols;
 
 		// Append a symbol to the bw string
-		void append(char b);
+		void read(const std::string& filename);
+
+		// Append a symbol to the bw string
+		void append(uint8_t b) {
+		    bool increment = false;
+		    if (empty()) {
+		    	push_back(RLUnit(b));
+		    } else {
+		        RLUnit& lastUnit = back();
+		        if (lastUnit.value() == b && !lastUnit.isFull()) {
+		            ++lastUnit;
+		        } else {
+		        	push_back(RLUnit(b));
+		        }
+		    }
+		    ++m_numSymbols;
+		}
+		
 };
 
 

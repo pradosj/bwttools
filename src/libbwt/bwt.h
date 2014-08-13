@@ -28,7 +28,6 @@ class bwt {
         bwt(const std::string& filename, int smallShift = 7);
 
 				inline size_t getBWLen() const { return m_rlString.m_numSymbols; }
-				inline size_t getNumRuns() const { return m_rlString.size(); }
 
         inline uint8_t symbol(size_t idx) const {
             // Calculate the Marker who's position is not less than idx
@@ -56,11 +55,14 @@ class bwt {
 				// Initialize the interval of index idx to be the range containining all the b suffixes
 				inline BWTInterval initInterval(const uint8_t b) const {
 						return BWTInterval(getPC(b),getPC(b) + getFullOcc(getBWLen() - 1)[b] - 1);
+//TODO: test if this alternative gives similar results as it should be faster. But take care of the out of bound in getPC(b+1)
+//  		return BWTInterval(getPC(b),getPC(b) + ((b+1<m_predCount.size())?getPC(b+1):getBWLen()) - 1);
 				}
 				
 				// Update the given interval using backwards search
 				// If the interval corresponds to string S, it will be updated for string bS
 				inline void updateInterval(BWTInterval& interval, uint8_t b) const {
+						assert(interval.lower>0);
 				    size_t pb = getPC(b);
 				    interval.lower = pb + getFullOcc(interval.lower - 1)[b];
 				    interval.upper = pb + getFullOcc(interval.upper)[b] - 1;

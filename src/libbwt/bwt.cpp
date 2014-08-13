@@ -1,21 +1,21 @@
 
 
 #include "bwt.h"
-#include "BWTReader.h"
 #include <istream>
-#include <queue>
-#include <map>
-#include <limits>
+#include <fstream>
 
 
 
 
 // Parse a BWT from a file
 bwt::bwt(const std::string& filename, int smallShift): m_largeShift(13), m_smallShift(smallShift) {
-    BWTReaderBinary reader(filename);
-    reader.read(this);
+		m_rlString.read(filename);
     initializeFMIndex();
 }
+
+
+
+
 
 
 
@@ -147,11 +147,10 @@ void bwt::initializeFMIndex() {
     assert(curr_large_marker_index == num_large_markers);
 
     // Initialize C(a)
-    m_predCount['$'] = 0;
-    m_predCount['A'] = running_ac['$'];
-    m_predCount['C'] = m_predCount['A'] + running_ac['A'];
-    m_predCount['G'] = m_predCount['C'] + running_ac['C'];
-    m_predCount['T'] = m_predCount['G'] + running_ac['G'];
+    m_predCount[0] = 0;
+    for(uint8_t i=1;i<m_predCount.size();i++) {
+    		m_predCount[i] = m_predCount[i-1] + running_ac[i-1];
+    } 
 }
 
 

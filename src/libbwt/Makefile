@@ -1,5 +1,5 @@
 
-OBJECTS := BWTReader.o bwt.o
+OBJECTS := rlestr.o bwt.o
 
 libbwt.a:$(OBJECTS)
 	ar rvs $@ $^
