@@ -25,8 +25,8 @@ namespace bwt {
 		    // of symbols seen up to that point. SmallMarkers are placed every 128 bases with the
 		    // count over the last 128 symbols. From these relative counts the absolute count
 		    // every 128 symbols can be interpolated.
-		    size_t num_large_markers = getNumRequiredMarkers(m_rlString.m_numSymbols, m_largeSampleRate);
-		    size_t num_small_markers = getNumRequiredMarkers(m_rlString.m_numSymbols, m_smallSampleRate);
+		    size_t num_large_markers = getNumRequiredMarkers(m_rlString.size(), m_largeSampleRate);
+		    size_t num_small_markers = getNumRequiredMarkers(m_rlString.size(), m_smallSampleRate);
 		    m_largeMarkers.resize(num_large_markers);
 		    m_smallMarkers.resize(num_small_markers);
 		
@@ -147,7 +147,7 @@ namespace bwt {
 		    for(uint8_t i=1;i<m_predCount.size();i++) {
 		    		m_predCount[i] = m_predCount[i-1] + running_ac[i-1];
 		    }
-		    assert(running_ac.sum()==m_rlString.m_numSymbols);
+		    assert(running_ac.sum()==m_rlString.size());
 		}
 
 };

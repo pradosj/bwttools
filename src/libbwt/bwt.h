@@ -50,8 +50,6 @@ namespace bwt {
 	        // Constructors
 	        fm_index(const std::string& filename, int smallShift = 7);
 	
-					inline size_t getBWLen() const { return m_rlString.m_numSymbols; }
-	
 	        inline uint8_t symbol(size_t idx) const {
 	            // Calculate the Marker who's position is not less than idx
 	            const LargeMarker& upper = getUpperMarker(idx);
@@ -77,7 +75,7 @@ namespace bwt {
 	
 					// Initialize the interval of index idx to be the range containining all the b suffixes
 					inline interval initInterval(const uint8_t b) const {
-							return interval(getPC(b),getPC(b) + getFullOcc(getBWLen() - 1)[b] - 1);
+							return interval(getPC(b),getPC(b) + getFullOcc(m_rlString.size() - 1)[b] - 1);
 //TODO: test if this alternative gives similar results as it should be faster. But take care of the out of bound in getPC(b+1)
 //  		return interval(getPC(b),getPC(b) + ((b+1<m_predCount.size())?getPC(b+1):getBWLen()) - 1);
 					}

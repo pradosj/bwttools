@@ -1,5 +1,5 @@
-#ifndef RLESTR_H
-#define RLESTR_H
+#ifndef RLESTRING_H
+#define RLESTRING_H
 
 
 #include <cassert>
@@ -68,29 +68,32 @@ struct rle_unit {
 
 
 
-struct rle_string {
+class rle_string {
     // The total length of the bw string
-    size_t m_numSymbols;
-		std::vector<rle_unit> runs;
+    size_t m_size;
+    
+    public:
+				std::vector<rle_unit> runs;
+				
+				inline size_t size() const { return m_size; }
+				
+				// Append a symbol to the bw string
+				void read(const std::string& filename);
 		
-		// Append a symbol to the bw string
-		void read(const std::string& filename);
-
-		// Append a symbol to the bw string
-		void append(uint8_t b) {
-		    if (runs.empty()) {
-		   		 	runs.push_back(b);
-		    } else {
-		        rle_unit& lastUnit = runs.back();
-		        if (lastUnit.value() == b && !lastUnit.full()) {
-		            ++lastUnit;
-		        } else {
-		        	runs.push_back(b);
-		        }
-		    }
-		    ++m_numSymbols;
-		}
-		
+				// Append a symbol to the bw string
+				void append(uint8_t b) {
+				    if (runs.empty()) {
+				   		 	runs.push_back(b);
+				    } else {
+				        rle_unit& lastUnit = runs.back();
+				        if (lastUnit.value() == b && !lastUnit.full()) {
+				            ++lastUnit;
+				        } else {
+				        	runs.push_back(b);
+				        }
+				    }
+				    ++m_size;
+				}
 };
 
 

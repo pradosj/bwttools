@@ -30,13 +30,13 @@ void rle_string::read(const std::string& filename) {
 		runs.resize(numRuns);
 		is.read(reinterpret_cast<char*>(&runs[0]), numRuns*sizeof(rle_unit));
 		
-		m_numSymbols = std::accumulate(runs.begin(),runs.end(),0,[](uint64_t s,rle_unit u){return s+u.length();});
-		if (numSymbols!=m_numSymbols) throw "BWT file corrupted: the number of symbol provided in the header do not match with the effective number of symbol";
+		m_size = std::accumulate(runs.begin(),runs.end(),0,[](uint64_t s,rle_unit u){return s+u.length();});
+		if (numSymbols!=m_size) throw "BWT file corrupted: the number of symbol provided in the header do not match with the effective number of symbol";
 		
 #ifndef NDEBUG
 		std::cerr << "An rle_string have been read:" << std::endl;
 		std::cerr << "  #run:" << runs.size() << std::endl;
-		std::cerr << "  size:" << m_numSymbols << std::endl;
+		std::cerr << "  size:" << m_size << std::endl;
 		std::cerr << "  sum of lengths:" << std::accumulate(runs.begin(),runs.end(),0,[](uint64_t s,rle_unit u) -> uint64_t{return s+u.length();}) << std::endl;
 #endif
 }
