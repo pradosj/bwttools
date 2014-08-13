@@ -8,10 +8,6 @@
 #include <limits>
 
 
-// macros
-#define OCC(c,i) m_occurrence.get(m_bwStr, (c), (i))
-#define PRED(c) m_predCount.get((c))
-
 
 
 static int calculateShiftValue(int divisor) {
