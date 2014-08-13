@@ -4,8 +4,11 @@
 #ifndef FMMARKERS_H
 #define FMMARKERS_H
 
-#include "AlphaCount.h"
+#include "alpha_count.h"
 
+
+namespace bwt {
+	
 
 /*! \class LargeMarker 
  * \brief To allow random access to the BWT symbols and implement the occurrence array we keep a vector of symbol counts every D1 symbols.
@@ -48,5 +51,7 @@ struct SmallMarker {
     uint16_t unitCount;
 };
 
+
+};
 
 #endif

@@ -8,14 +8,14 @@
 #include <array>
 
 
-
+namespace bwt {
+	
 /*! \class AlphaCount
  *  \brief A simple class holding the count for each character of an integer alphabet.
  *         The size of the alphabet is given by a the template parameter AlphabetSize
  */
 template<typename Storage,uint8_t AlphabetSize=5>
-class AlphaCount: public std::array<Storage,AlphabetSize> {
-    public:
+struct AlphaCount: public std::array<Storage,AlphabetSize> {
         inline AlphaCount() {clear();}
         inline void clear() {std::fill(this->begin(),this->end(),0);}
 
@@ -49,6 +49,6 @@ class AlphaCount: public std::array<Storage,AlphabetSize> {
 typedef AlphaCount<uint64_t> AlphaCount64;
 typedef AlphaCount<uint16_t> AlphaCount16;
 
-
+};
 
 #endif
