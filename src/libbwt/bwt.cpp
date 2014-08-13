@@ -10,28 +10,8 @@
 
 
 
-static int calculateShiftValue(int divisor) {
-    assert(divisor > 0);
-    assert(IS_POWER_OF_2(divisor));
-
-    // m_sampleRate is a power of 2, count what bit is set
-    unsigned int v = divisor;
-    unsigned int c = 0; // c accumulates the total bits set in v
-
-    while(v != 1) {
-        v >>= 1;
-        ++c;
-    }
-    assert(1 << c == divisor);
-    return c;
-}
-
-
-
 // Parse a BWT from a file
-bwt::bwt(const std::string& filename, int sampleRate): m_largeSampleRate(8192),
-                                                       m_smallSampleRate(sampleRate)
-{
+bwt::bwt(const std::string& filename, int smallShift): m_largeShift(13), m_smallShift(smallShift) {
     BWTReaderBinary reader(filename);
     reader.read(this);
     initializeFMIndex();
@@ -41,9 +21,9 @@ bwt::bwt(const std::string& filename, int sampleRate): m_largeSampleRate(8192),
 
 // Fill in the FM-index data structures
 void bwt::initializeFMIndex() {
-    m_smallShiftValue = calculateShiftValue(m_smallSampleRate);
-    m_largeShiftValue = calculateShiftValue(m_largeSampleRate);
-
+		const size_t m_smallSampleRate = 1<<m_smallShift;
+		const size_t m_largeSampleRate = 1<<m_largeShift;
+	
     // initialize the marker vectors,
     // LargeMarkers are placed every 2048 bases (by default) containing the absolute count
     // of symbols seen up to that point. SmallMarkers are placed every 128 bases with the
@@ -124,8 +104,7 @@ void bwt::initializeFMIndex() {
             assert(running_ac.sum() == running_total);
     
             // Calculate the number of rl units that are contained in this block
-            if(curr_unit_index - prev_small_marker_unit_index > std::numeric_limits<uint16_t>::max())
-            {
+            if(curr_unit_index - prev_small_marker_unit_index > std::numeric_limits<uint16_t>::max()) {
                 std::cerr << "Error: Number of units in occurrence array block " << curr_small_marker_index 
                           << " exceeds the maximum value.\n";
                 exit(EXIT_FAILURE);
@@ -135,7 +114,7 @@ void bwt::initializeFMIndex() {
             // Calculate the large marker to set the relative count from
             // This is generally the most previously placed large block except it might 
             // be the second-previous in the case that we placed the last large marker.
-            size_t large_marker_index = expected_marker_pos >> m_largeShiftValue;
+            size_t large_marker_index = expected_marker_pos >> m_largeShift;
             assert(large_marker_index < curr_large_marker_index); // ensure the last has ben placed
             LargeMarker& prev_large_marker = m_largeMarkers[large_marker_index];
 
@@ -175,98 +154,5 @@ void bwt::initializeFMIndex() {
     m_predCount['T'] = m_predCount['G'] + running_ac['G'];
 }
 
-// get the number of markers required to cover the n symbols at sample rate of d
-size_t bwt::getNumRequiredMarkers(size_t n, size_t d) const {
-    // we place a marker at the beginning (with no accumulated counts), every m_sampleRate
-    // bases and one at the very end (with the total counts)
-    size_t num_markers = (n % d == 0) ? (n / d) + 1 : (n / d) + 2;
-    return num_markers;
-}
-
-// Print the BWT
-void bwt::print() const {
-    size_t numRuns = getNumRuns();
-    std::string bwt;
-    for(size_t i = 0; i < numRuns; ++i)
-    {
-        const RLUnit& unit = m_rlString[i];
-        char symbol = unit.value();
-        size_t length = unit.length();
-        for(size_t j = 0; j < length; ++j)
-            std::cout << symbol;
-        std::cout << " : " << symbol << "," << length << "\n"; 
-        bwt.append(length, symbol);
-    }
-    std::cout << "B: " << bwt << "\n";
-}
-
-// Print information about the BWT
-void bwt::printInfo() const {
-    size_t small_m_size = m_smallMarkers.capacity() * sizeof(SmallMarker);
-    size_t large_m_size = m_largeMarkers.capacity() * sizeof(LargeMarker);
-    size_t total_marker_size = small_m_size + large_m_size;
-
-    size_t bwStr_size = m_rlString.capacity() * sizeof(RLUnit);
-    size_t other_size = sizeof(*this);
-    size_t total_size = total_marker_size + bwStr_size + other_size;
-
-    double mb = (double)(1024 * 1024);
-    double total_mb = total_size / mb;
-    
-    printf("\nRLBWT info:\n");
-    printf("Large Sample rate: %zu\n", m_largeSampleRate);
-    printf("Small Sample rate: %zu\n", m_smallSampleRate);
-    printf("Contains %zu symbols in %zu runs (%1.4lf symbols per run)\n", m_rlString.m_numSymbols, m_rlString.size(), (double)m_rlString.m_numSymbols / m_rlString.size());
-    printf("Marker Memory -- Small Markers: %zu (%.1lf MB) Large Markers: %zu (%.1lf MB)\n", small_m_size, small_m_size / mb, large_m_size, large_m_size / mb);
-    printf("Total Memory -- Markers: %zu (%.1lf MB) Str: %zu (%.1lf MB) Misc: %zu Total: %zu (%lf MB)\n", total_marker_size, total_marker_size / mb, bwStr_size, bwStr_size / mb, other_size, total_size, total_mb);
-    printf("N: %zu Bytes per symbol: %lf\n\n", m_rlString.m_numSymbols, (double)total_size / m_rlString.m_numSymbols);
-}
-
-// Print the run length distribution of the BWT
-void bwt::printRunLengths() const {
-    typedef std::map<size_t, size_t> DistMap;
-    DistMap rlDist;
-
-    char prevSym = '\0';
-    size_t prevRunLen = 0;
-    size_t currLen = 0;
-    size_t adjacentSingletons = 0;
-    size_t numRuns = getNumRuns();
-    size_t totalRuns = 0;
-    for(size_t i = 0; i < numRuns; ++i) {
-        const RLUnit& unit = m_rlString[i];
-        size_t length = unit.length();
-        if(unit.value() == prevSym) {
-            currLen += unit.length();
-        } else {
-            if(prevSym != '\0') {
-                if(currLen >= 200)
-                    rlDist[200]++;
-                else
-                    rlDist[currLen]++;
-                totalRuns++;
-            }
-            currLen = length;
-            prevSym = unit.value();
-        }
-
-        if(length == 1 && prevRunLen == 1) {
-            adjacentSingletons += 1;
-            prevRunLen = 0;
-        }
-        prevRunLen = length;
-    }
-    
-    printf("Run length distrubtion\n");
-    printf("rl\tcount\tfrac\n");
-    double cumulative_mb = 0.0f;
-    for(DistMap::iterator iter = rlDist.begin(); iter != rlDist.end(); ++iter) {
-        cumulative_mb += ((double)iter->second / (1024 * 1024));
-        printf("%zu\t%zu\t%lf\t%lf\n", iter->first, iter->second, double(iter->second) / totalRuns, cumulative_mb);
-    }
-    printf("Total runs: %zu\n", totalRuns);
-    printf("Number of adjacent singleton runs: %zu\n", adjacentSingletons);
-    printf("Minimal runs: %zu\n", totalRuns - adjacentSingletons / 2);
-}
 
 

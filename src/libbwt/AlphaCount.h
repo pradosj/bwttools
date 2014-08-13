@@ -20,10 +20,7 @@ class AlphaCount: public std::array<Storage,AlphabetSize> {
         inline void clear() {std::fill(this->begin(),this->end(),0);}
 
 				//! \return sum of all elements
-				inline Storage sum() const {return std::accumulate(this->begin(),this->end(),0);}
-				//! \return the sum of elements lower than b
-				inline Storage sumLT(uint8_t b) const {return std::accumulate(this->begin(),this->begin()+b,0);}        
-        
+				inline Storage sum() const {return std::accumulate(this->begin(),this->end(),0);}        
 
         // Operators
         inline friend bool operator==(const AlphaCount& left, const AlphaCount& right) {return std::mismatch(left.begin(),left.end(),right.begin()).first == left.end();}

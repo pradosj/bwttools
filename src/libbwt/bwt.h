@@ -10,9 +10,6 @@
 #include <vector>
 
 
-// return true if x is a power of 2
-#define IS_POWER_OF_2(x) ((x) & ((x) - 1)) == 0
-
 // return the x % y given that y is a power of 2
 #define MOD_POWER_2(x, y) (x) & ((y) - 1)
 
@@ -28,7 +25,7 @@ class bwt {
     public:
     
         // Constructors
-        bwt(const std::string& filename, int sampleRate = 128);
+        bwt(const std::string& filename, int smallShift = 7);
 
 				inline size_t getBWLen() const { return m_rlString.m_numSymbols; }
 				inline size_t getNumRuns() const { return m_rlString.size(); }
@@ -99,18 +96,10 @@ class bwt {
         
 
         // Return the first letter of the suffix starting at idx
-        inline char getF(size_t idx) const {
-            size_t ci = 0;
-            while(ci < BWT_ALPHABET::ALPHABET_SIZE && m_predCount[ci] <= idx)
-                ci++;
-            assert(ci != 0);
-            return BWT_ALPHABET::RANK_ALPHABET[ci - 1];
+        inline uint8_t getF(uint64_t idx) const {
+        		auto i = std::lower_bound(m_predCount.begin(),m_predCount.end(),idx,std::less_equal<uint64_t>());
+            return std::distance(m_predCount.begin(),i);
         }
-
-        // Print the size of the BWT
-        void printInfo() const;
-        void print() const;
-        void printRunLengths() const;
 
         // IO
         friend class BWTReaderBinary;
@@ -122,13 +111,17 @@ class bwt {
         //
         void initializeFMIndex();
 
-        // Calculate the number of markers to place
-        size_t getNumRequiredMarkers(size_t n, size_t d) const;
+				// get the number of markers required to cover the n symbols at sample rate of d
+		    // we place a marker at the beginning (with no accumulated counts), every m_sampleRate
+		    // bases and one at the very end (with the total counts)
+				static inline size_t getNumRequiredMarkers(size_t n, size_t d) {return (n % d == 0) ? (n / d) + 1 : (n / d) + 2;}
+        
 
         // Get the index of the marker nearest to position in the bwt
-        inline size_t getNearestMarkerIdx(size_t position, size_t sampleRate, size_t shiftValue) const {
-            size_t offset = MOD_POWER_2(position, sampleRate); // equivalent to position % sampleRate
-            size_t baseIdx = position >> shiftValue;
+        inline size_t getNearestMarkerIdx(size_t position) const {
+        		size_t baseIdx = position >> m_smallShift;
+        		size_t sampleRate = 1<<m_smallShift;
+            size_t offset = position & (sampleRate-1);
             return (offset < (sampleRate >> 1))?baseIdx:baseIdx+1;
         }
 
@@ -137,8 +130,8 @@ class bwt {
         // LargeMarker
         inline LargeMarker getInterpolatedMarker(size_t target_small_idx) const {
             // Calculate the position of the LargeMarker closest to the target SmallMarker
-            size_t target_position = target_small_idx << m_smallShiftValue;
-            size_t curr_large_idx = target_position >> m_largeShiftValue;
+            size_t target_position = target_small_idx << m_smallShift;
+            size_t curr_large_idx = target_position >> m_largeShift;
 
             LargeMarker absoluteMarker = m_largeMarkers[curr_large_idx];
             const SmallMarker& relative = m_smallMarkers[target_small_idx];
@@ -148,22 +141,13 @@ class bwt {
         }
 
         // Get the interpolated marker with position closest to position
-        inline LargeMarker getNearestMarker(size_t position) const {
-            size_t nearest_small_idx = getNearestMarkerIdx(position, m_smallSampleRate, m_smallShiftValue);
-            return getInterpolatedMarker(nearest_small_idx);
-        }
+        inline LargeMarker getNearestMarker(size_t position) const {return getInterpolatedMarker(getNearestMarkerIdx(position));}
 
         // Get the greatest interpolated marker whose position is less than or equal to position
-        inline LargeMarker getLowerMarker(size_t position) const {
-            size_t target_small_idx = position >> m_smallShiftValue;
-            return getInterpolatedMarker(target_small_idx);
-        }
+        inline LargeMarker getLowerMarker(size_t position) const {return getInterpolatedMarker(position >> m_smallShift);}
 
         // Get the lowest interpolated marker whose position is strictly greater than position
-        inline LargeMarker getUpperMarker(size_t position) const {
-            size_t target_small_idx = (position >> m_smallShiftValue) + 1;
-            return getInterpolatedMarker(target_small_idx);
-        }
+        inline LargeMarker getUpperMarker(size_t position) const {return getInterpolatedMarker((position >> m_smallShift) + 1);}
 
 
 
@@ -208,13 +192,9 @@ class bwt {
         std::vector<LargeMarker> m_largeMarkers;
         std::vector<SmallMarker> m_smallMarkers;
 
-        // The sample rate used for the markers
-        size_t m_largeSampleRate;
-        size_t m_smallSampleRate;
-
         // The amount to shift values by to divide by m_sampleRate
-        int m_smallShiftValue;
-        int m_largeShiftValue;
+        int m_smallShift;
+        int m_largeShift;
 
 };
 #endif
