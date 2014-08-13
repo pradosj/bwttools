@@ -3,7 +3,6 @@
 
 #include <string>
 #include "bwt.h"
-#include "BWTInterval.h"
 
 
 // functions
@@ -13,29 +12,29 @@ namespace BWTAlgorithms {
 // Find the interval in pBWT corresponding to w
 // If w does not exist in the BWT, the interval 
 // coordinates [l, u] will be such that l > u
-BWTInterval findInterval(const bwt& BWT, const std::string& w) {
-		if (w.size()<1) return BWTInterval();
-    BWTInterval interval = BWT.initInterval(w.back());
+bwt::interval findInterval(const bwt::fm_index& fm, const std::string& w) {
+		if (w.size()<1) return bwt::interval();
+    bwt::interval range = fm.initInterval(w.back());
     for(auto i=w.rbegin()+1;i!=w.rend();i++) {
-        BWT.updateInterval(interval,*i);
-        if (!interval.isValid()) return interval;
+        fm.updateInterval(range,*i);
+        if (range.empty()) return range;
     }
-    return interval;
+    return range;
 }
 
 // Return the string from the BWT at idx
-std::string extractString(const bwt& BWT, size_t idx) {
+std::string extractString(const bwt::fm_index& fm, size_t idx) {
     // The range [0,n) in the BWT contains all the terminal
     // symbols for the reads. Search backwards from one of them
     // until the '$' is found gives a full string.
     std::string out;
-    BWTInterval interval(idx, idx);
+    bwt::interval range(idx, idx);
     while(1) {
-        assert(interval.isValid());
-        uint8_t b = BWT.symbol(interval.lower);
-        if (b == '$') break;
+        assert(!range.empty());
+        uint8_t b = fm.symbol(range.lower);
+        if (b == 0) break;
         out.push_back(b);
-        BWT.updateInterval(interval, b);
+        fm.updateInterval(range, b);
     }
     std::reverse(out.begin(),out.end());
     return out;

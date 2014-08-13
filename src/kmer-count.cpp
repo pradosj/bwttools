@@ -6,7 +6,6 @@
 #include <getopt.h>
 
 #include <bwt.h>
-#include <BWTInterval.h>
 #include <BWTAlgorithms.h>
 
 
@@ -110,21 +109,21 @@ void parseKmerCountOptions(int argc, char* argv[]) {
 struct stack_elt_t {
     size_t str_sz;
     uint8_t bp;
-    BWTInterval range;
-    stack_elt_t(size_t strsz,char bp,const BWTInterval& range):str_sz(strsz),bp(bp),range(range){}
+    bwt::interval range;
+    stack_elt_t(size_t strsz,char bp,const bwt::interval& range):str_sz(strsz),bp(bp),range(range){}
 };
 
 
 
 // extract all canonical kmers of a bwt by performing a backward depth-first-search
-void traverse_kmer(size_t n, const bwt** pBWTs, unsigned int k) {
+void traverse_kmer(size_t n, const bwt::fm_index** pBWTs, unsigned int k) {
     std::stack< stack_elt_t > stack;
     std::string str; // string storing the current path
 
     // Intitialize the search with root elements
     for(uint8_t i = 1; i < alphabet.size(); ++i) {
         stack_elt_t e(str.size(),i,pBWTs[0]->initInterval(i));
-        if (e.range.isValid()) stack.push(e);
+        if (!e.range.empty()) stack.push(e);
     }
 
     // Perform the kmer search
@@ -141,8 +140,8 @@ void traverse_kmer(size_t n, const bwt** pBWTs, unsigned int k) {
 
             // look for the count of its reverse complement
             std::string seq_rc(complement(str));
-            BWTInterval range_rc = BWTAlgorithms::findInterval(*pBWTs[0],seq_rc);
-            int64_t seq_rc_count = range_rc.isValid()?range_rc.size():0;
+            bwt::interval range_rc = BWTAlgorithms::findInterval(*pBWTs[0],seq_rc);
+            int64_t seq_rc_count = range_rc.empty()?0:range_rc.size();
 
             // print the current kmer if canonical
             if (seq<seq_rc) {
@@ -165,7 +164,7 @@ void traverse_kmer(size_t n, const bwt** pBWTs, unsigned int k) {
             for(size_t i = 1; i < alphabet.size(); ++i) {
                 stack_elt_t e(str.size(),i,top.range);
                 pBWTs[0]->updateInterval(e.range,e.bp);
-                if (e.range.isValid()) stack.push(e);
+                if (!e.range.empty()) stack.push(e);
             }
         }
     }
@@ -182,9 +181,9 @@ int main(int argc, char* argv[]) {
     parseKmerCountOptions(argc,argv);
 
     // allocate BWT objects
-    const bwt** pBWTs = new const bwt*[opt::bwtFiles.size()];
+    const bwt::fm_index** pBWTs = new const bwt::fm_index*[opt::bwtFiles.size()];
     for(size_t i=0;i<opt::bwtFiles.size();++i) {
-        pBWTs[i] = new bwt(opt::bwtFiles[i],opt::sampleRate);
+        pBWTs[i] = new bwt::fm_index(opt::bwtFiles[i],opt::sampleRate);
     }
 
     // run kmer search

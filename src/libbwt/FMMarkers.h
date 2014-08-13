@@ -8,7 +8,7 @@
 
 
 /*! \class LargeMarker 
- * \brief To allow random access to the BWT symbols and implement the occurrence array we keep a vector of symbol counts every D1 symbols.$
+ * \brief To allow random access to the BWT symbols and implement the occurrence array we keep a vector of symbol counts every D1 symbols.
  *        These counts are the absolute number of times each symbol has been seen up to that point.
  */
 struct LargeMarker {
