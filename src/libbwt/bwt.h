@@ -4,7 +4,7 @@
 
 #include "rle_string.h"
 #include "interval.h"
-#include "FMMarkers.h"
+#include "markers.h"
 #include <algorithm>
 #include <vector>
 
