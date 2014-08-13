@@ -120,7 +120,7 @@ void traverse_kmer(size_t n, const bwt** pBWTs, unsigned int k) {
             if (seq<seq_rc) {
                 std::cout << seq << '\t' << seq_count << '\t' << seq_rc_count;
                 for(size_t i=1;i<n;i++) {
-                    std::cout << '\t' << std::max<int64_t>(BWTAlgorithms::findInterval(pBWTs[i],seq).size(),0) << '\t' << std::max<int64_t>(BWTAlgorithms::findInterval(pBWTs[i],seq_rc).size(),0);
+                    std::cout << '\t' << std::max<int64_t>(BWTAlgorithms::findInterval(*pBWTs[i],seq).size(),0) << '\t' << std::max<int64_t>(BWTAlgorithms::findInterval(*pBWTs[i],seq_rc).size(),0);
                 }
                 std::cout << std::endl;
             } else if (seq_rc_count<=0) {
@@ -128,7 +128,7 @@ void traverse_kmer(size_t n, const bwt** pBWTs, unsigned int k) {
                 // so print it now as it will never be traversed by the searching algorithm
                 std::cout << seq_rc << '\t' << seq_rc_count << '\t' << seq_count;
                 for(size_t i=1;i<n;i++) {
-                    std::cout << '\t' << std::max<int64_t>(BWTAlgorithms::findInterval(pBWTs[i],seq_rc).size(),0) << '\t' << std::max<int64_t>(BWTAlgorithms::findInterval(pBWTs[i],seq).size(),0);
+                    std::cout << '\t' << std::max<int64_t>(BWTAlgorithms::findInterval(*pBWTs[i],seq_rc).size(),0) << '\t' << std::max<int64_t>(BWTAlgorithms::findInterval(*pBWTs[i],seq).size(),0);
                 }
                 std::cout << std::endl;
             }
