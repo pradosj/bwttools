@@ -15,6 +15,6 @@ libbwt/libbwt.a:
 
 clean:
 	$(MAKE) -C libbwt clean
-	rm -f kmer-count
+	rm -f test kmer-count
 
 
