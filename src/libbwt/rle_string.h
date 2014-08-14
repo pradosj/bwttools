@@ -8,6 +8,9 @@
 #include <numeric>
 #include <functional>
 
+namespace bwt {
+
+
 /*! \class rle_unit
  *  \brief A run-length encoded unit of the FM-index
  * 
@@ -76,30 +79,63 @@ class rle_string {
     std::vector<size_t> m_marks; // m_marks[i] is the index of the run containing symbol str[i*marks_sampling]
     std::vector<uint8_t> m_marks_offset; // m_marks_offset[i] is where in the run is symbol str[i*marks_sampling]
     
-    inline void update_size(){m_size = std::accumulate(runs.begin(),runs.end(),0,[](uint64_t s,rle_unit u){return s+u.length();});}
+		//! \brief append a symbol to the end of rle_string
+		void push_back(uint8_t b) {
+		    if (runs.empty()) {
+		   		 	runs.push_back(b);
+		    } else {
+		        rle_unit& lastUnit = runs.back();
+		        if (lastUnit.value() == b && !lastUnit.full()) {
+		            ++lastUnit;
+		        } else {
+		        	runs.push_back(b);
+		        }
+		    }
+		    ++m_size;
+		}    
+    
+    inline void update_size(){
+    		m_size = std::accumulate(runs.begin(),runs.end(),0,[](uint64_t s,rle_unit u){return s+u.length();});
+    }
+    
+    inline void init_marks() {
+    		m_marks.resize((size()-1)/marks_sampling);
+    		m_marks_offset.resize(m_marks.size());
+    		
+    		// iterate over the runs to initialize the marks
+    		uint64_t ub,lb = 0;
+    		size_t mark_idx = 0;
+    		uint64_t mark_pos = 0;
+    		for(size_t r=0;r<runs.size();r++) {
+    				ub = lb + runs[r].length();
+    				if (ub > mark_pos) {
+    						m_marks[mark_idx] = r;
+    						m_marks_offset[mark_idx] = mark_pos - lb;
+    						mark_pos += marks_sampling;
+    						mark_idx++;
+    				}
+    				lb = ub;
+    		}
+    }
   public:
 			std::vector<rle_unit> runs;
+			
+			// create an empty string
+			rle_string():m_size(0) { 
+			}
+			
+			template<typename ForwardIterator> rle_string(ForwardIterator first,ForwardIterator last) : m_size(0) {
+					for(;first!=last;first++) push_back(*first);
+					init_marks();
+			}
 			
 			//! \return total length of the string
 			inline size_t size() const { return m_size; }
 			
 			//! \brief read a rle_string from a binary stream
 			friend std::istream& operator>>(std::istream& is,rle_string& str);
-
-			//! \brief append a symbol to the rle_string
-			void push_back(uint8_t b) {
-			    if (runs.empty()) {
-			   		 	runs.push_back(b);
-			    } else {
-			        rle_unit& lastUnit = runs.back();
-			        if (lastUnit.value() == b && !lastUnit.full()) {
-			            ++lastUnit;
-			        } else {
-			        	runs.push_back(b);
-			        }
-			    }
-			    ++m_size;
-			}
+			
+			std::ostream& print(std::ostream& os);
 			
       inline uint8_t operator[](uint64_t i) const {
       		size_t mark_idx = i/marks_sampling;
@@ -120,7 +156,7 @@ class rle_string {
 };
 
 
-
+};
 
 
 
