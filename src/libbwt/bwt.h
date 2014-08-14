@@ -60,7 +60,8 @@ namespace bwt {
 	
 					// Initialize the interval of index idx to be the range containining all the b suffixes
 					inline interval initInterval(const uint8_t b) const {
-							return interval(getC(b),getC(b) + occ(bwt.size() - 1)[b] - 1);
+							auto cb = getC(b);
+							return interval(cb,cb + occ(bwt.size() - 1)[b] - 1);
 //TODO: test if this alternative gives similar results as it should be faster. But take care of the out of bound in getPC(b+1)
 //  		return interval(getPC(b),getPC(b) + ((b+1<m_predCount.size())?getPC(b+1):getBWLen()) - 1);
 					}
@@ -69,7 +70,7 @@ namespace bwt {
 					// If the interval corresponds to string S, it will be updated for string bS
 					inline void updateInterval(interval& interval, uint8_t b) const {
 							assert(interval.lower>0);
-					    size_t pb = getC(b);
+					    auto pb = getC(b);
 					    interval.lower = pb + occ(interval.lower - 1)[b];
 					    interval.upper = pb + occ(interval.upper)[b] - 1;
 					}
