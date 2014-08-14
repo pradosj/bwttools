@@ -1,7 +1,7 @@
 
 #include "rle_string.h"
 #include <iostream>
-#include <fstream>
+#include <istream>
 #include <string>
 #include <numeric>
 #include <exception>
@@ -20,24 +20,23 @@ static void readHeader(std::istream& is,size_t& num_strings, size_t& num_symbols
 }
 
 
-void rle_string::read(const std::string& filename) {
-		std::ifstream is(filename, std::ios::binary);
+std::istream& operator>>(std::istream& is,rle_string& str) {
 		BWFlag flag;
     size_t numStrings, numSymbols, numRuns;
     readHeader(is, numStrings, numSymbols, numRuns, flag);
     assert(numRuns > 0);
     
-		runs.resize(numRuns);
-		is.read(reinterpret_cast<char*>(&runs[0]), numRuns*sizeof(rle_unit));
+		str.runs.resize(numRuns);
+		is.read(reinterpret_cast<char*>(&str.runs[0]), numRuns*sizeof(rle_unit));
 		
-		m_size = std::accumulate(runs.begin(),runs.end(),0,[](uint64_t s,rle_unit u){return s+u.length();});
-		if (numSymbols!=m_size) throw "BWT file corrupted: the number of symbol provided in the header do not match with the effective number of symbol";
-		
+		str.update_size();
 #ifndef NDEBUG
 		std::cerr << "An rle_string have been read:" << std::endl;
-		std::cerr << "  #run:" << runs.size() << std::endl;
-		std::cerr << "  size:" << m_size << std::endl;
-		std::cerr << "  sum of lengths:" << std::accumulate(runs.begin(),runs.end(),0,[](uint64_t s,rle_unit u) -> uint64_t{return s+u.length();}) << std::endl;
-#endif
+		std::cerr << "  #run:" << str.runs.size() << std::endl;
+		std::cerr << "  size:" << numSymbols << std::endl;
+		std::cerr << "  sum of lengths:" << str.size() << std::endl;
+#endif		
+		if (numSymbols!=str.size()) throw "BWT file corrupted: the number of symbol provided in the header do not match with the effective number of symbol";
+		return is;
 }
 

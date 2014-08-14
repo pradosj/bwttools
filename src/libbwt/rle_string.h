@@ -69,31 +69,54 @@ struct rle_unit {
 
 
 class rle_string {
-    // The total length of the bw string
     size_t m_size;
     
-    public:
-				std::vector<rle_unit> runs;
-				
-				inline size_t size() const { return m_size; }
-				
-				// Append a symbol to the bw string
-				void read(const std::string& filename);
-		
-				// Append a symbol to the bw string
-				void append(uint8_t b) {
-				    if (runs.empty()) {
-				   		 	runs.push_back(b);
-				    } else {
-				        rle_unit& lastUnit = runs.back();
-				        if (lastUnit.value() == b && !lastUnit.full()) {
-				            ++lastUnit;
-				        } else {
-				        	runs.push_back(b);
-				        }
-				    }
-				    ++m_size;
-				}
+    // marks used for random access
+    const size_t marks_sampling = 1024;
+    std::vector<size_t> m_marks; // m_marks[i] is the index of the run containing symbol str[i*marks_sampling]
+    std::vector<uint8_t> m_marks_offset; // m_marks_offset[i] is where in the run is symbol str[i*marks_sampling]
+    
+    inline void update_size(){m_size = std::accumulate(runs.begin(),runs.end(),0,[](uint64_t s,rle_unit u){return s+u.length();});}
+  public:
+			std::vector<rle_unit> runs;
+			
+			//! \return total length of the string
+			inline size_t size() const { return m_size; }
+			
+			//! \brief read a rle_string from a binary stream
+			friend std::istream& operator>>(std::istream& is,rle_string& str);
+
+			//! \brief append a symbol to the rle_string
+			void push_back(uint8_t b) {
+			    if (runs.empty()) {
+			   		 	runs.push_back(b);
+			    } else {
+			        rle_unit& lastUnit = runs.back();
+			        if (lastUnit.value() == b && !lastUnit.full()) {
+			            ++lastUnit;
+			        } else {
+			        	runs.push_back(b);
+			        }
+			    }
+			    ++m_size;
+			}
+			
+      inline uint8_t operator[](uint64_t i) const {
+      		size_t mark_idx = i/marks_sampling;
+      		auto r = m_marks[mark_idx];
+      		
+      		// [lb..ub) is the index range of run r
+      		uint64_t ub, lb = (i % marks_sampling) - m_marks_offset[mark_idx];
+      		while(1) {
+      			ub = lb + runs[r].length();
+      			if (ub>i) break;
+      			lb = ub;
+      			r++;
+      		}
+					return runs[r].value();
+      }
+      //const_iterator begin() const {return 0;}
+      //const_iterator end() const {return 0;}
 };
 
 
