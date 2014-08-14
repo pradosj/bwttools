@@ -176,6 +176,7 @@ void traverse_kmer(size_t n, const bwt::fm_index** pBWTs, unsigned int k) {
 // Main
 //
 int main(int argc, char* argv[]) {
+	try {
     // parse command line arguments
     parseKmerCountOptions(argc,argv);
 
@@ -193,7 +194,11 @@ int main(int argc, char* argv[]) {
         delete pBWTs[i];
     }
     delete[] pBWTs;
-    return 0;
+		
+	} catch (std::exception e) {
+			std::cerr << e.what() << std::endl;
+	};
+  return 0;
 }
 
 

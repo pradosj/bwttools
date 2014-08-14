@@ -14,7 +14,7 @@ enum BWFlag {BWF_NOFMI = 0,BWF_HASFMI};
 static void readHeader(std::istream& is,size_t& num_strings, size_t& num_symbols, size_t& num_runs, BWFlag& flag) {
     uint16_t magic_number;
     is.read(reinterpret_cast<char*>(&magic_number), sizeof(magic_number));
-    if (magic_number != 0xCACA) throw "BWT file is not properly formatted: the magic number provided in file header doesn't correspond to the expected one";
+    if (magic_number != 0xCACA) throw std::runtime_error("BWT file is not properly formatted: the magic number provided in file header doesn't correspond to the expected one");
     is.read(reinterpret_cast<char*>(&num_strings), sizeof(num_strings));
     is.read(reinterpret_cast<char*>(&num_symbols), sizeof(num_symbols));
     is.read(reinterpret_cast<char*>(&num_runs), sizeof(num_runs));
@@ -38,14 +38,15 @@ std::istream& operator>>(std::istream& is,rle_string& str) {
 		std::cerr << "  size:" << numSymbols << std::endl;
 		std::cerr << "  #run:" << str.runs.size() << std::endl;
 		std::cerr << "  avg run size:" << ((double) numSymbols) / str.runs.size() << std::endl;
+		std::cerr << "  #string:" << numStrings << std::endl;
 #endif		
-		if (numSymbols!=str.size()) throw "BWT file corrupted: the number of symbol provided in the header do not match with the effective number of symbol";
+		if (numSymbols!=str.size()) throw std::runtime_error("BWT file corrupted: the number of symbol provided in the header do not match with the effective number of symbol");
 		return is;
 }
 
 
 std::ostream& rle_string::print(std::ostream& os) {
-		for(auto r:runs) os << r.length() << 'x' << r.value() << ' ';
+		for(auto r:runs) os << (size_t) r.length() << 'x' << (size_t) r.value() << ' ';
 		return os;
 }
 

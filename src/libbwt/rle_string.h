@@ -7,6 +7,7 @@
 #include <vector>
 #include <numeric>
 #include <functional>
+#include <iostream>
 
 namespace bwt {
 
@@ -72,7 +73,7 @@ struct rle_unit {
 
 
 class rle_string {
-    size_t m_size;
+    size_t m_size = 0;
     
     // marks used for random access
     const size_t marks_sampling = 1024;
@@ -99,39 +100,40 @@ class rle_string {
     }
     
     inline void init_marks() {
-    		m_marks.resize((size()-1)/marks_sampling);
+    		m_marks.resize(size()>0?(size()-1)/marks_sampling+1:0);
     		m_marks_offset.resize(m_marks.size());
     		
     		// iterate over the runs to initialize the marks
     		uint64_t ub,lb = 0;
     		size_t mark_idx = 0;
     		uint64_t mark_pos = 0;
-    		for(size_t r=0;r<runs.size();r++) {
-    				ub = lb + runs[r].length();
+    		size_t run_idx = 0;
+    		for(auto run:runs) {
+    				ub = lb + run.length();
     				if (ub > mark_pos) {
-    						m_marks[mark_idx] = r;
+    						m_marks[mark_idx] = run_idx;
     						m_marks_offset[mark_idx] = mark_pos - lb;
     						mark_pos += marks_sampling;
-    						mark_idx++;
+    						++mark_idx;
     				}
     				lb = ub;
+    				++run_idx;
     		}
     }
   public:
 			std::vector<rle_unit> runs;
 			
 			// create an empty string
-			rle_string():m_size(0) { 
+			rle_string() {}
+			template<typename T> rle_string(std::initializer_list<T> l) : rle_string(l.begin(),l.end()) {}
+			template<typename ForwardIterator> rle_string(ForwardIterator first,ForwardIterator last) {
+					for(;first!=last;++first) push_back(*first);
+					init_marks();					
 			}
 			
-			template<typename ForwardIterator> rle_string(ForwardIterator first,ForwardIterator last) : m_size(0) {
-					for(;first!=last;first++) push_back(*first);
-					init_marks();
-			}
 			
-			template<typename T> rle_string(std::initializer_list<T> l) {
-					rle_string(l.begin(),l.end());
-			}
+			
+			
 			
 			//! \return total length of the string
 			inline size_t size() const { return m_size; }
@@ -143,17 +145,17 @@ class rle_string {
 			
       inline uint8_t operator[](uint64_t i) const {
       		size_t mark_idx = i/marks_sampling;
-      		auto r = m_marks[mark_idx];
-      		
-      		// [lb..ub) is the index range of run r
-      		uint64_t ub, lb = (i % marks_sampling) - m_marks_offset[mark_idx];
+      		auto run_idx = m_marks[mark_idx];
+
+      		// [lb..ub) is the index range of run_idx
+      		uint64_t ub, lb = (mark_idx * marks_sampling) - m_marks_offset[mark_idx];
       		while(1) {
-      			ub = lb + runs[r].length();
+      			ub = lb + runs[run_idx].length();
       			if (ub>i) break;
       			lb = ub;
-      			r++;
+      			++run_idx;
       		}
-					return runs[r].value();
+					return runs[run_idx].value();
       }
       //const_iterator begin() const {return 0;}
       //const_iterator end() const {return 0;}

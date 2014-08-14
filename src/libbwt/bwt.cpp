@@ -9,7 +9,7 @@ namespace bwt {
 	
 		// Parse a BWT from a file
 		fm_index::fm_index(const std::string& filename, int smallShift): m_largeShift(13), m_smallShift(smallShift) {
-				std::fstream(filename,std::ios::binary) >> bwt;
+				std::ifstream(filename,std::ios::binary) >> bwt;
 		    init();
 		}
 		
