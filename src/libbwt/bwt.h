@@ -19,65 +19,13 @@ namespace bwt {
 	 */
 	class fm_index {
 	    public:
-
 	        // Constructors
 	        fm_index(const std::string& filename, int smallShift = 7);
-	
-	        inline uint8_t symbol(size_t idx) const {
-	            // Calculate the Marker who's position is not less than idx
-	            const LargeMarker& upper = getUpperMarker(idx);
-	            size_t current_position = upper.getActualPosition();
-	            assert(current_position >= idx);
-	
-	            size_t symbol_index = upper.unitIndex; 
-	
-	            // Search backwards (towards 0) until idx is found
-	            while(current_position > idx) {
-	                assert(symbol_index != 0);
-	                symbol_index -= 1;
-	                current_position -= m_rlString.runs[symbol_index].length();
-	            }
-	
-	            // symbol_index is now the index of the run containing the idx symbol
-	            const rle_unit& unit = m_rlString.runs[symbol_index];
-	            assert(current_position <= idx && current_position + unit.length() >= idx);
-	            return unit.value();
-	        }
-	        
-	        
-	        // Return the first letter of the suffix starting at idx
-	        inline uint8_t getF(uint64_t idx) const {
-	        		auto i = std::lower_bound(m_predCount.begin(),m_predCount.end(),idx,std::less_equal<uint64_t>());
-	            return std::distance(m_predCount.begin(),i);
-	        }
-	        
-	        
-	
-					// Initialize the interval of index idx to be the range containining all the b suffixes
-					inline interval initInterval(const uint8_t b) const {
-							return interval(getPC(b),getPC(b) + getFullOcc(m_rlString.size() - 1)[b] - 1);
-//TODO: test if this alternative gives similar results as it should be faster. But take care of the out of bound in getPC(b+1)
-//  		return interval(getPC(b),getPC(b) + ((b+1<m_predCount.size())?getPC(b+1):getBWLen()) - 1);
-					}
-				
-					// Update the given interval using backwards search
-					// If the interval corresponds to string S, it will be updated for string bS
-					inline void updateInterval(interval& interval, uint8_t b) const {
-							assert(interval.lower>0);
-					    size_t pb = getPC(b);
-					    interval.lower = pb + getFullOcc(interval.lower - 1)[b];
-					    interval.upper = pb + getFullOcc(interval.upper)[b] - 1;
-					}
-	
-	        inline alpha_count64::value_type getPC(uint8_t b) const { return m_predCount[b]; }
 
+					inline alpha_count64::value_type getC(uint8_t b) const { return m_predCount[b]; }
 
-
-
-	
-	
 	        // Return the number of times each symbol in the alphabet appears in bwt[0, idx]
-	        inline alpha_count64 getFullOcc(size_t idx) const { 
+	        inline alpha_count64 occ(size_t idx) const { 
 	            // The counts in the marker are not inclusive (unlike the Occurrence class)
 	            // so we increment the index by 1.
 	            ++idx;
@@ -96,6 +44,44 @@ namespace bwt {
 	            return running_count;
 	        }
 	
+
+	        // Return the first letter of the suffix starting at idx
+	        inline uint8_t getF(uint64_t i) const {
+	        		auto lb = std::lower_bound(m_predCount.begin(),m_predCount.end(),i,std::less_equal<uint64_t>());
+	            return std::distance(m_predCount.begin(),lb);
+	        }
+	        
+	        // Return the first letter of the suffix starting at idx
+	        inline uint64_t getLF(uint64_t i) const {
+	        		auto c = bwt[i];
+	            return getC(c) + occ(i)[c];
+	        }
+	        
+	
+					// Initialize the interval of index idx to be the range containining all the b suffixes
+					inline interval initInterval(const uint8_t b) const {
+							return interval(getC(b),getC(b) + occ(bwt.size() - 1)[b] - 1);
+//TODO: test if this alternative gives similar results as it should be faster. But take care of the out of bound in getPC(b+1)
+//  		return interval(getPC(b),getPC(b) + ((b+1<m_predCount.size())?getPC(b+1):getBWLen()) - 1);
+					}
+				
+					// Update the given interval using backwards search
+					// If the interval corresponds to string S, it will be updated for string bS
+					inline void updateInterval(interval& interval, uint8_t b) const {
+							assert(interval.lower>0);
+					    size_t pb = getC(b);
+					    interval.lower = pb + occ(interval.lower - 1)[b];
+					    interval.upper = pb + occ(interval.upper)[b] - 1;
+					}
+	
+	        
+
+
+
+
+	
+	
+
 
 	        
 
@@ -124,7 +110,7 @@ namespace bwt {
 					    bwt::interval range(idx, idx);
 					    while(1) {
 					        assert(!range.empty());
-					        uint8_t b = symbol(range.lower);
+					        uint8_t b = bwt[range.lower];
 					        if (b == 0) break;
 					        out.push_back(b);
 					        updateInterval(range, b);
@@ -191,8 +177,8 @@ namespace bwt {
 	                size_t diff = currentPosition - targetPosition;
 	                assert(currentUnitIndex >= 0);
 	                --currentUnitIndex;
-	                size_t count = std::min<size_t>(m_rlString.runs[currentUnitIndex].length(),diff);                
-	    						running_count[m_rlString.runs[currentUnitIndex].value()] -= count;
+	                size_t count = std::min<size_t>(bwt.runs[currentUnitIndex].length(),diff);                
+	    						running_count[bwt.runs[currentUnitIndex].value()] -= count;
 	                currentPosition -= count;
 	            }
 	        }
@@ -203,9 +189,9 @@ namespace bwt {
 	            // Search backwards (towards 0) until idx is found
 	            while(currentPosition != targetPosition) {
 	                size_t diff = targetPosition - currentPosition;
-	                assert(currentUnitIndex < m_rlString.runs.size());
-	                size_t count = std::min<size_t>(m_rlString.runs[currentUnitIndex].length(),diff);
-	                running_count[m_rlString.runs[currentUnitIndex].value()] += count;
+	                assert(currentUnitIndex < bwt.runs.size());
+	                size_t count = std::min<size_t>(bwt.runs[currentUnitIndex].length(),diff);
+	                running_count[bwt.runs[currentUnitIndex].value()] += count;
 	                currentPosition += count;
 	                ++currentUnitIndex;
 	            }
@@ -217,7 +203,7 @@ namespace bwt {
 	        alpha_count64 m_predCount;
 	        
 	        // The run-length encoded string
-	        rle_string m_rlString;
+	        rle_string bwt;
 	
 	        // The marker vector
 	        std::vector<LargeMarker> m_largeMarkers;
