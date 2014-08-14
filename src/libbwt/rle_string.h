@@ -129,6 +129,10 @@ class rle_string {
 					init_marks();
 			}
 			
+			template<typename T> rle_string(std::initializer_list<T> l) {
+					rle_string(l.begin(),l.end());
+			}
+			
 			//! \return total length of the string
 			inline size_t size() const { return m_size; }
 			
