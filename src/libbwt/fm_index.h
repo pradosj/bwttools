@@ -16,60 +16,63 @@
  */
 template <typename String,size_t AlphabetSize>
 class fm_index {
-		typedef std::array<uint64_t,AlphabetSize> alpha_count64;
-		std::vector<alpha_count64> _occ;
-				
-    public:
-	      // The C(a) array
-	      std::array<uint64_t,AlphabetSize+1> C;
-	      
-	      // Reference to the Burrow-Wheeler encoded string
-	      const String& bwt;
+	public:
+ 		typedef typename String::allocator_type::size_type size_type;
+ 		typedef typename String::allocator_type::value_type value_type;
+		typedef std::array<size_type,AlphabetSize> alpha_count;
+		std::vector<alpha_count> _occ;
     
-        // Constructors
-        fm_index(const String& bwt): bwt(bwt),_occ(bwt.size()) {
-        		// compute the # of occurence of a character c in C[c]
-        		// and put in _occ[i][c] the # of occurence of c in bwt[0..i]
-        		uint64_t k=0;
-        		std::fill(C.begin(),C.end(),0);
-						auto i = _occ.begin();					
-        		std::fill(i->begin(),i->end(),0);
-        		for(auto c:bwt) {
-        				++C[c];
-        				++(i->operator[](c));
-        				auto j = i;
-        				++i;
-        				*i = *j;
-        		}        		
-        		// update C[c] to contain the # of occurence of all lexicography smaller characters
-						uint64_t s = 0;
-        		for(auto& i:C) {
-        				auto v = i;
-        				i = s;
-        				s += v;
-        		}
-        		assert(C.back()==bwt.size());
-        }
+    // The C(a) array
+    std::array<size_type,AlphabetSize+1> C;
+    
+    // Reference to the Burrow-Wheeler encoded string
+    const String& bwt;
 
-        // Return the first letter of the suffix starting at idx
-        inline uint64_t LF(uint64_t i) const {
-        		auto c = bwt[i];
-            return C[c] + occ(i)[c];
-        }
+    //! \brief constructor
+    fm_index(const String& bwt): bwt(bwt),_occ(bwt.size()) {
+    		// compute the # of occurence of a character c in C[c]
+    		// and put in _occ[i][c] the # of occurence of c in bwt[0..i]
+    		size_type k=0;
+    		std::fill(C.begin(),C.end(),0);
+				auto i = _occ.begin();					
+    		std::fill(i->begin(),i->end(),0);
+    		for(auto c:bwt) {
+    				++C[c];
+    				++(i->operator[](c));
+    				auto j = i;
+    				++i;
+    				*i = *j;
+    		}        		
+    		// update C[c] to contain the # of occurence of all lexicography smaller characters
+				size_type s = 0;
+    		for(auto& i:C) {
+    				auto v = i;
+    				i = s;
+    				s += v;
+    		}
+    		assert(C.back()==bwt.size());
+    }
 
-        // Return the number of times each symbol in the alphabet appears in bwt[0, idx]
-        inline alpha_count64 occ(uint64_t i) const {return _occ[i];}
+    //! \brief last to first mapping
+    //! \return suffix array rank for character bwt[i]
+    inline size_type lf_rank(size_type i) const {
+    		auto c = bwt[i];
+        return C[c] + occ(i)[c];
+    }
 
-				// Initialize the interval of index idx to be the range containining all the b suffixes
-				inline interval init_interval(const uint8_t b) const {return interval(C[b],C[b+1]);}
-			
-				// Update the given interval using backwards search
-				// If the interval corresponds to string S, it will be updated for string bS
-				inline void update_interval(interval& interval, uint8_t b) const {
-						assert(interval.lower>0);
-				    interval.lower = C[b] + occ(interval.lower-1)[b];
-				    interval.upper = C[b] + occ(interval.upper-1)[b];
-				}	
+    //! \return number of occurence of symbol c in bwt[0..i]
+    inline size_type occ(const value_type c, size_type i) const {return _occ[i][c];}
+
+		//! return the suffix array interval for character b
+		inline interval sa_interval(const value_type b) const {return interval(C[b],C[b+1]);}
+	
+		//! \brief update a suffix array interval using backwards search
+		//! if the given interval corresponds to string S, it will be updated for string bS
+		inline void update_sa_interval(interval& interval, const value_type b) const {
+				assert(interval.lower>0);
+		    interval.lower = C[b] + occ(b,interval.lower-1);
+		    interval.upper = C[b] + occ(b,interval.upper-1);
+		}
 };
 
 

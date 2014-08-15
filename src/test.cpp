@@ -14,15 +14,15 @@ int main(int argc, char* argv[]) {
 
 		std::cout << "occ[c,i]:" << std::endl;
 		for(auto c:{'$','a','b','c','d','r'}) {
-				for(auto i=0;i<bwt.size();i++) std::cout << fm.occ(i)[c];
+				for(auto i=0;i<bwt.size();i++) std::cout << fm.occ(c,i);
 				std::cout << std::endl;
 		}
 		
-		interval range = fm.init_interval('a');
+		interval range = fm.sa_interval('a');
 		std::cout << range.lower << ':' << range.upper << std::endl;
-		fm.update_interval(range,'r');
+		fm.update_sa_interval(range,'r');
 		std::cout << range.lower << ':' << range.upper << std::endl;
-		fm.update_interval(range,'b');
+		fm.update_sa_interval(range,'b');
 		std::cout << range.lower << ':' << range.upper << std::endl;
 
 		return 0;
