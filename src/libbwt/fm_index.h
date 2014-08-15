@@ -153,6 +153,7 @@ class fm_index {
 		inline void update_sa_interval(interval& interval, const uint8_t b) const {
 				assert(interval.lower>0);
 		    interval.lower = C(b) + occ(b,interval.lower-1);
+		    //TODO: check if computation of occ(.,upper) is faster with occ(.,lower)
 		    interval.upper = C(b) + occ(b,interval.upper-1);
 		}
 		
@@ -179,7 +180,7 @@ class fm_index {
 			//
 			std::array<uint64_t,AlphabetSize+1> _C;
 			std::vector<run> _runs; // rle encoded bwt string
-
+			
 			// set one largeMark every 65536 indices, and one smallMark every 512
 			// _mark64[i] stores occ(.,k) and run_index(bwt[k]), for k=i*65536
 			// _mark16[i] stores occ(.,k) and run_index(bwt[k]), for k=i*512 express relatively to the corresponding _mark64
