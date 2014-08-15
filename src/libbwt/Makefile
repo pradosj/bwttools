@@ -1,5 +1,5 @@
 
-OBJECTS := rle_string.o bwt.o
+OBJECTS :=
 
 libbwt.a:$(OBJECTS)
 	ar rvs $@ $^

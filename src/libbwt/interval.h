@@ -4,8 +4,6 @@
 #include <inttypes.h>
 
 
-namespace bwt {
-
 /*! \class interval
  *  \brief Data structures for holding and manipulating the coordinates in a BWT/FM-index
  * 
@@ -18,11 +16,9 @@ struct interval {
     interval() : lower(0), upper(0) {}
     interval(uint64_t l, uint64_t u) : lower(l), upper(u) {}
 
-    inline bool empty() const {return lower > upper;}
-    inline uint64_t size() const {return empty()?0:upper-lower+1;}	
+    inline bool empty() const {return upper <= lower;}
+    inline uint64_t size() const {return empty()?0:upper-lower;}
 };
-
-};	
 
 
 #endif

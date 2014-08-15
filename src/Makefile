@@ -2,9 +2,9 @@
 export CXXFLAGS += -std=c++11
 #export CXXFLAGS += -DNDEBUG
 
-all:test kmer-count
+all:test
 
-test:test.cpp libbwt/libbwt.a
+test:test.cpp
 	$(CXX) $(CXXFLAGS) -o $@ -Ilibbwt $^
 
 kmer-count:kmer-count.cpp libbwt/libbwt.a

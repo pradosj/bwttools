@@ -1,18 +1,31 @@
 
 #include <iostream>
-#include <rle_string.h>
+#include <fm_index.h>
 
 
 
 int main(int argc, char* argv[]) {
-	bwt::rle_string s = {1,2,3,3,3,2,3,0,0,0,0,0,0,1,1,2,2};
-	std::cout << s.size() << std::endl;
-	s.print(std::cout) << std::endl;
-	
-	for(auto i=0;i<s.size();i++) {std::cout << (int) s[i] << ' ';}
-	std::cout << std::endl;
-	
-	return 0;
+		std::string bwt("ard$rcaaaabb");
+		fm_index<std::string,256> fm(bwt);
+		
+		std::cout << "C[]:" << std::endl;
+		for(auto c:fm.C) std::cout << c << ' ';
+		std::cout << std::endl;
+
+		std::cout << "occ[c,i]:" << std::endl;
+		for(auto c:{'$','a','b','c','d','r'}) {
+				for(auto i=0;i<bwt.size();i++) std::cout << fm.occ(i)[c];
+				std::cout << std::endl;
+		}
+		
+		interval range = fm.init_interval('a');
+		std::cout << range.lower << ':' << range.upper << std::endl;
+		fm.update_interval(range,'r');
+		std::cout << range.lower << ':' << range.upper << std::endl;
+		fm.update_interval(range,'b');
+		std::cout << range.lower << ':' << range.upper << std::endl;
+
+		return 0;
 }
 
 
