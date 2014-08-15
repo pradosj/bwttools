@@ -9,7 +9,7 @@ int main(int argc, char* argv[]) {
 		fm_index<std::string,256> fm(bwt);
 		
 		std::cout << "C[]:" << std::endl;
-		for(auto c:fm.C) std::cout << c << ' ';
+		for(auto c:{'$','a','b','c','d','r'}) std::cout << fm.C(c) << ' ';
 		std::cout << std::endl;
 
 		std::cout << "occ[c,i]:" << std::endl;
