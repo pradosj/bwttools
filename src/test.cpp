@@ -6,7 +6,7 @@
 
 int main(int argc, char* argv[]) {
 		std::string bwt("ard$rcaaaabb");
-		fm_index<std::string,256> fm(bwt);
+		fm_index<6> fm;
 		
 		std::cout << "C[]:" << std::endl;
 		for(auto c:{'$','a','b','c','d','r'}) std::cout << fm.C(c) << ' ';
