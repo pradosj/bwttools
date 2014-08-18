@@ -2,7 +2,6 @@
 #define FMINDEX_H
 
 
-#include "interval.h"
 #include <algorithm>
 #include <numeric>
 #include <vector>
@@ -10,9 +9,23 @@
 #include <string>
 #include <array>
 #include <istream>
-	
+#include <iostream>
+#include <inttypes.h>	
 
 
+/*! \class interval
+ *  \brief Data structures for holding and manipulating the coordinates in a BWT/FM-index
+ * 
+ *  An interval holds a pair of integers which delineate an alignment of some string to a BWT/Suffix Array
+ */
+struct interval {
+    uint64_t lower;
+    uint64_t upper;
+    interval() : lower(0), upper(0) {}
+    interval(uint64_t l, uint64_t u) : lower(l), upper(u) {}
+    inline bool empty() const {return upper <= lower;}
+    inline uint64_t size() const {return empty()?0:upper-lower;}
+};
 
 
 /*! \class fm_index
@@ -24,26 +37,18 @@
 template <size_t AlphabetSize>
 class fm_index {	
 	public:
-		fm_index(const std::string& bwt) {
-				_bwt_size = bwt.size();
-				for(auto c:bwt) {
-						if (_runs.empty()) {
-							_runs.push_back(c);
-						} else if (!_runs.back().full() && _runs.back().value()==c) {
-								++_runs.back();
-						} else {
-								_runs.push_back(c);
-						}
-				}
-				init_fm_from_runs();
-		}
-	
-		//! \brief construct an ibject by reading the rle-encoded bwt string from a binary stream
+		//! \brief construct an object reading the bwt from the input range
+		template<typename InputIterator>
+		fm_index(InputIterator first,InputIterator last);
+		
+		//! \brief construct an object by reading the rle-encoded bwt string from a binary stream
 		fm_index(std::istream& is) {
 				_bwt_size = read_runs(is);
 				init_fm_from_runs();
 		}
 
+		//! \return size of the alphabet
+		size_t alphabet_size() const {return AlphabetSize;}
 		//! \return total number of symbol in the bwt string
 		inline uint64_t size() const {return _bwt_size;}
     //! \return number of occurence of symbols [0..c) in bwt
@@ -65,25 +70,25 @@ class fm_index {
     }
 
 		//! return the suffix array interval for character b
-		inline interval sa_interval(const uint8_t b) const {return interval(C(b),C(b>=AlphabetSize?size():b+1));}
-	
+		inline interval sa_interval(const uint8_t b) {
+				return interval(C(b),C(b>=alphabet_size()?size():b+1));
+		}
+		
 		//! \brief update a suffix array interval using backwards search
 		//! if the given interval corresponds to string S, it will be updated for string bS
-		inline void update_sa_interval(interval& interval, const uint8_t b) const {
+		inline void update_sa_interval(interval& interval, const uint8_t b) {
+				//NOTE: computation of occ(.,upper) might be faster using occ(.,lower)
 				assert(interval.lower>0);
 		    interval.lower = C(b) + occ(b,interval.lower-1);
-		    //NOTE: computation of occ(.,upper) might be faster using using occ(.,lower)
 		    interval.upper = C(b) + occ(b,interval.upper-1);
 		}
 		
-		
-		
-		void print_info() {
-				std::cout << "size:" << size() << std::endl;
-				std::cout << "#run:" << _runs.size() << std::endl;
-				std::cout << "avg run size:" << (double)size() / _runs.size() << std::endl;
-				std::cout << "#marks64:" << _marks64.size() << " (" << (double) _marks64.size() * sizeof(mark64_t)/1024/1024 << "Mo)" << std::endl;
-				std::cout << "#marks16:" << _marks16.size() << " (" << (double) _marks16.size() * sizeof(mark16_t)/1024/1024 << "Mo)" << std::endl;
+		void print_info(std::ostream& os) {
+				os << "size:" << size() << std::endl;
+				os << "#run:" << _runs.size() << std::endl;
+				os << "avg run size:" << (double)size() / _runs.size() << std::endl;
+				os << "#marks64:" << _marks64.size() << " (" << (double) _marks64.size() * sizeof(mark64_t)/1024/1024 << "Mo)" << std::endl;
+				os << "#marks16:" << _marks16.size() << " (" << (double) _marks16.size() * sizeof(mark16_t)/1024/1024 << "Mo)" << std::endl;
 		}
 		
 	private:
@@ -135,54 +140,79 @@ class fm_index {
 			}
 			
 			//! \brief iterate over _runs to initialize _C, bwt_size, _marks16 and marks64
-	    void init_fm_from_runs() {
-					_marks64.reserve((size()>>16) + 1);
-		    	_marks16.reserve((size()>>9) + 1);
-		    	
-	    		std::fill(_C.begin(),_C.end(),0);
-	    		uint64_t run_index=0;
-	    		uint64_t run_pos=0;
-	    		for(auto run:_runs) {
-	    				if (run_pos >= _marks64.size()<<16) _marks64.push_back(mark64_t(run_index,_C));
-	    				if (run_pos >= _marks16.size()<<9) {
-	    						_marks16.push_back(mark16_t(run_index - _marks64.back().run_index));
-	    						std::transform(_C.begin(),_C.end(),_marks64.back().counts.begin(),_marks16.back().counts.begin(),std::minus<uint64_t>());
-	    				}
-	    				_C[run.value()] += run.length();
-	    				run_pos += run.length();
-	    				++run_index;
-	    		}
-	
-					// C[c] is the count symbol c in bwt string
-					// transform it into the count of lexicography smaller symbols [0..c)
-					uint64_t s = 0;
-	    		for(auto& i:_C) {
-	    				auto v = i;
-	    				i = s;
-	    				s += v;
-	    		}
-	    		_bwt_size = s;
-	    }
+	    void init_fm_from_runs();
 			
-			size_t read_runs(std::istream& is) {
-					enum {BWF_NOFMI = 0,BWF_HASFMI} flag;
-			    uint16_t magic_number;
-			    size_t num_strings, num_symbols, num_runs;
-			    is.read(reinterpret_cast<char*>(&magic_number), sizeof(magic_number));
-			    if (magic_number != 0xCACA) throw std::runtime_error("BWT file is not properly formatted: the magic number provided in file header doesn't correspond to the expected one");
-			    is.read(reinterpret_cast<char*>(&num_strings), sizeof(num_strings));
-			    is.read(reinterpret_cast<char*>(&num_symbols), sizeof(num_symbols));
-			    is.read(reinterpret_cast<char*>(&num_runs), sizeof(num_runs));
-			    is.read(reinterpret_cast<char*>(&flag), sizeof(flag));
-					std::cout << "#symbols:" << num_symbols << std::endl;
-					std::cout << "#strings:" << num_strings << std::endl;			    
-			    _runs.clear();
-					_runs.resize(num_runs);
-					is.read(reinterpret_cast<char*>(&_runs[0]), num_runs*sizeof(_runs[0]));
-					return num_symbols;
-			}
-	    
+			//! \brief read rle encoded runs from an input stream
+			size_t read_runs(std::istream& is);	    
 };
+
+
+template <size_t AlphabetSize>
+template<typename InputIterator>
+fm_index<AlphabetSize>::fm_index(InputIterator first,InputIterator last) {
+		for(;first != last;first++) {
+				if (_runs.empty()) {
+					_runs.push_back(*first);
+				} else if (!_runs.back().full() && _runs.back().value()==*first) {
+						++_runs.back();
+				} else {
+						_runs.push_back(*first);
+				}
+				_bwt_size++;
+		}
+		init_fm_from_runs();
+}
+
+
+template <size_t AlphabetSize>
+void fm_index<AlphabetSize>::init_fm_from_runs() {
+		_marks64.reserve((size()>>16) + 1);
+  	_marks16.reserve((size()>>9) + 1);
+  	
+		std::fill(_C.begin(),_C.end(),0);
+		uint64_t run_index=0;
+		uint64_t run_pos=0;
+		for(auto run:_runs) {
+				if (run_pos >= _marks64.size()<<16) _marks64.push_back(mark64_t(run_index,_C));
+				if (run_pos >= _marks16.size()<<9) {
+						_marks16.push_back(mark16_t(run_index - _marks64.back().run_index));
+						std::transform(_C.begin(),_C.end(),_marks64.back().counts.begin(),_marks16.back().counts.begin(),std::minus<uint64_t>());
+				}
+				_C[run.value()] += run.length();
+				run_pos += run.length();
+				++run_index;
+		}
+
+		// C[c] is the count symbol c in bwt string
+		// transform it into the count of lexicography smaller symbols [0..c)
+		uint64_t s = 0;
+		for(auto& i:_C) {
+				auto v = i;
+				i = s;
+				s += v;
+		}
+		_bwt_size = s;
+}
+
+
+template <size_t AlphabetSize>
+size_t fm_index<AlphabetSize>::read_runs(std::istream& is) {
+		enum {BWF_NOFMI = 0,BWF_HASFMI} flag;
+    uint16_t magic_number;
+    size_t num_strings, num_symbols, num_runs;
+    is.read(reinterpret_cast<char*>(&magic_number), sizeof(magic_number));
+    if (magic_number != 0xCACA) throw std::runtime_error("BWT file is not properly formatted: the magic number provided in file header doesn't correspond to the expected one");
+    is.read(reinterpret_cast<char*>(&num_strings), sizeof(num_strings));
+    is.read(reinterpret_cast<char*>(&num_symbols), sizeof(num_symbols));
+    is.read(reinterpret_cast<char*>(&num_runs), sizeof(num_runs));
+    is.read(reinterpret_cast<char*>(&flag), sizeof(flag));
+		std::cout << "#symbols:" << num_symbols << std::endl;
+		std::cout << "#strings:" << num_strings << std::endl;			    
+    _runs.clear();
+		_runs.resize(num_runs);
+		is.read(reinterpret_cast<char*>(&_runs[0]), num_runs*sizeof(_runs[0]));
+		return num_symbols;
+}
 
 
 #endif
