@@ -54,18 +54,22 @@ class fm_index {
     //! \return number of occurence of symbols [0..c) in bwt
     inline uint64_t C(uint8_t c) const {return _C[c];}
 
+    //! \return ith bwt symbol
+    inline uint8_t operator[](uint64_t i) const;
+
+
     //! \return number of occurence of symbol c in bwt[0..i]
     inline uint64_t occ(uint8_t c, uint64_t i) const {
     		auto mark = previous_mark(i);
     		auto run = _runs.begin() + mark.run_index;
-    		auto run_pos = std::accumulate(mark.counts.begin(),mark.counts.end(),0) - 1;
+    		auto run_pos = std::accumulate(mark.counts.begin(),mark.counts.end(),0);
     		while(i >= run_pos + run->length()) {
     				run_pos += run->length();
     				mark.counts[run->value()] += run->length();
     				//++mark.run_index;
     				++run;
     		}
-    		mark.counts[run->value()] += (i-run_pos);
+    		mark.counts[run->value()] += (i-run_pos+1);
     		return mark.counts[c];
     }
 
