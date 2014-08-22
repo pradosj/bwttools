@@ -21,18 +21,18 @@ namespace bwt {
   template<typename T,size_t sz>
     struct alpha_count : std::array<T,sz> {
     
-    T sum() const {
+    inline T sum() const {
       return std::accumulate(this->begin(),this->end(),0);
     }
     
     template<typename T2>
-      alpha_count& operator+=(const alpha_count<T2,sz>& n) {
+      inline alpha_count& operator+=(const alpha_count<T2,sz>& n) {
       std::transform(n.begin(),n.end(),this->begin(),this->begin(),std::plus<T>());
       return *this;
     }
     
     template<typename T2>
-      alpha_count& operator=(const T2& n) {
+      inline alpha_count& operator=(const T2& n) {
       std::fill(this->begin(),this->end(),n);
       return *this;
     }
@@ -69,34 +69,22 @@ namespace bwt {
       init_fm_from_runs();
     }
     
-    /*! \return size of the alphabet
-     */
-    size_t alphabet_size() const {
-      return AlphabetSize;
-    }
+    //! \return size of the alphabet
+    size_t alphabet_size() const {return AlphabetSize;}
     
-    /*! \return total number of symbol in the bwt string
-     */
-    inline uint64_t size() const {
-      return _bwt_size;
-    }
+    //! \return total number of symbol in the bwt string
+    inline uint64_t size() const {return _bwt_size;}
     
     /*! \brief number of occurence of symbols [0..c) in bwt string. 
      *         This is a public class attribute but should not be modified externaly
      */
     alpha_count64 C; 
     
-    /*! \return number of occurence of symbol c in bwt[0..i]
-     */
-    inline alpha_count64 occ(const uint64_t i) const {
-      return mark_at(i).counts;
-    }
+    //! \return number of occurence of symbol c in bwt[0..i]
+    inline alpha_count64 occ(const uint64_t i) const {return mark_at(i).counts;}
     
-    /*! \return bwt[i], the ith character of bwt string
-     */
-    inline uint8_t operator[](const uint64_t i) const {
-      return _runs[mark_at(i).run_index].value();
-    }
+    //! \return bwt[i], the ith character of bwt string
+    inline uint8_t operator[](const uint64_t i) const {return _runs[mark_at(i).run_index].value();}
     
     /*! \brief 1-character prefix extension of the interval [first,last) corresponding to string "S"
      *         Extension is done with all characters of the alphabet.
