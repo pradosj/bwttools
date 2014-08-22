@@ -13,19 +13,6 @@
 #include <inttypes.h>	
 
 
-/*! \class interval
- *  \brief Data structures for holding and manipulating the coordinates in a BWT/FM-index
- * 
- *  An interval holds a pair of integers which delineate an alignment of some string to a BWT/Suffix Array
- */
-struct interval {
-    uint64_t lower;
-    uint64_t upper;
-    interval() : lower(0), upper(0) {}
-    interval(uint64_t l, uint64_t u) : lower(l), upper(u) {}
-    inline bool empty() const {return upper <= lower;}
-    inline uint64_t size() const {return empty()?0:upper-lower;}
-};
 
 
 /*! \class fm_index
@@ -73,20 +60,7 @@ class fm_index {
     		return mark.counts[c];
     }
 
-		//! return the suffix array interval for character b
-		inline interval sa_interval(const uint8_t b) {
-				return interval(C(b),C(b>=alphabet_size()?size():b+1));
-		}
-		
-		//! \brief update a suffix array interval using backwards search
-		//! if the given interval corresponds to string S, it will be updated for string bS
-		inline void update_sa_interval(interval& interval, const uint8_t b) {
-				//NOTE: computation of occ(.,upper) might be faster using occ(.,lower)
-				assert(interval.lower>0);
-		    interval.lower = C(b) + occ(b,interval.lower-1);
-		    interval.upper = C(b) + occ(b,interval.upper-1);
-		}
-		
+
 		void print_info(std::ostream& os) {
 				os << "size:" << size() << std::endl;
 				os << "#run:" << _runs.size() << std::endl;
@@ -120,6 +94,10 @@ class fm_index {
 					inline run_t& operator++() {++_data;return *this;}
 			};
 
+			// internal constants
+			static const uint8_t shift64 = 16;
+			static const uint8_t shift16 = 7;
+			
 
 			//
 			// attributes
@@ -136,8 +114,8 @@ class fm_index {
 			 *          occ(.,k) where k is the index of the first symbol of the run
 			*/
 			inline mark64_t previous_mark(uint64_t i) const {
-					auto m64 = _marks64[i>>16];
-					const auto& m16 = _marks16[i>>9];
+					auto m64 = _marks64[i>>shift64];
+					const auto& m16 = _marks16[i>>shift16];
 					m64.run_index += m16.run_index;
 					std::transform(m64.counts.begin(),m64.counts.end(),m16.counts.begin(),m64.counts.begin(),std::plus<uint64_t>());
 					return m64;
@@ -170,15 +148,15 @@ fm_index<AlphabetSize>::fm_index(InputIterator first,InputIterator last) {
 
 template <size_t AlphabetSize>
 void fm_index<AlphabetSize>::init_fm_from_runs() {
-		_marks64.reserve((size()>>16) + 1);
-  	_marks16.reserve((size()>>9) + 1);
+		_marks64.reserve((size()>>shift64) + 1);
+  	_marks16.reserve((size()>>shift16) + 1);
   	
 		std::fill(_C.begin(),_C.end(),0);
 		uint64_t run_index=0;
 		uint64_t run_pos=0;
 		for(auto run:_runs) {
-				if (run_pos >= _marks64.size()<<16) _marks64.push_back(mark64_t(run_index,_C));
-				if (run_pos >= _marks16.size()<<9) {
+				if (run_pos >= _marks64.size()<<shift64) _marks64.push_back(mark64_t(run_index,_C));
+				if (run_pos >= _marks16.size()<<shift16) {
 						_marks16.push_back(mark16_t(run_index - _marks64.back().run_index));
 						std::transform(_C.begin(),_C.end(),_marks64.back().counts.begin(),_marks16.back().counts.begin(),std::minus<uint64_t>());
 				}
