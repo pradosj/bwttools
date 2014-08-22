@@ -8,7 +8,6 @@
 #include <cinttypes>
 
 #include <fm_index.h>
-#include <algo.h>
 
 
 
@@ -93,8 +92,8 @@ args_t parseKmerCountOptions(int argc, char* argv[]) {
 // Stack structure used in the depth first search of kmers
 struct stack_elt_t {
     dna_string path;
-    bwt::interval range;
-    stack_elt_t(dna_string path):path(path){}
+    dna_index::alpha_count64 lb;
+    dna_index::alpha_count64 ub;
 };
 
 
@@ -102,29 +101,27 @@ struct stack_elt_t {
 // extract all canonical kmers of a bwt by performing a backward depth-first-search
 void traverse_kmer(dna_indices& bwts, unsigned int k) {
     std::stack< stack_elt_t > stack;
-		stack.push(dna_string(""));
+		stack.push(stack_elt_t());
+		bwts[0]->extend_backward(stack.top().lb,stack.top().ub);
 
     // Perform the kmer search
     while(!stack.empty()) {
         // pop an element from the stack, and update the string path accordingly
         stack_elt_t top = stack.top();
         stack.pop();
-        if (top.path.length()>=k) {
-            // we found a kmer, retreive the number of occurence
-            dna_string seq(top.path);
-            std::reverse(seq.begin(),seq.end());
-            std::transform(seq.begin(),seq.end(),seq.begin(),decode);
-            std::cout << seq << '\t' << top.range.size() << std::endl;
-        } else {
-            // not yet a suffix of size k, push next candidates
-            for(size_t i = 1; i < alphabet.size(); ++i) {
-                stack_elt_t e(top);
-                bwt::update_interval(e.range,*bwts[0],i);
-                if (!e.range.empty()) {
-                		e.path.push_back(i);
-                		stack.push(e);
-                }
-            }
+        for(size_t i = 1; i < alphabet.size(); ++i) {
+        		if (top.lb[i]<top.ub[i]) {
+                stack_elt_t e = top;
+                e.path.push_back(i);
+				        if (e.path.length()>=k) {
+				            std::reverse(e.path.begin(),e.path.end());
+				            std::transform(e.path.begin(),e.path.end(),e.path.begin(),decode);
+				            std::cout << e.path << '\t' << (e.ub[i]-e.lb[i]) << std::endl;
+				        } else {
+		                bwts[0]->extend_backward(e.lb,e.ub,i);
+		                stack.push(e);
+				        }
+        		}
         }
     }
 }

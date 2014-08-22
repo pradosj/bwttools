@@ -15,13 +15,44 @@
 namespace bwt {
 
 
+template<typename T,size_t sz>
+struct alpha_count : std::array<T,sz> {
+		
+		T sum() const {
+				T s = std::accumulate(this->begin(),this->end(),0);
+				return s;
+		}
+		
+		template<typename T2>
+		alpha_count& operator+=(const alpha_count<T2,sz>& n) {
+				std::transform(n.begin(),n.end(),this->begin(),this->begin(),std::plus<T>());
+				return *this;
+		}
+		
+		template<typename T2>
+		alpha_count& operator=(const T2& n) {
+				std::fill(this->begin(),this->end(),n);
+				return *this;
+		}
+
+		friend inline std::ostream& operator<<(std::ostream& os,const alpha_count& o) {
+				os << '[';
+				for(auto c:o) os << c << ',';
+				os << ']';
+				return os;
+		}
+};
+
 /*! \class fm_index
  *  \brief FM index with an internal run-length encoded Burrows Wheeler Transform string
  *         To speed up random access, the class store one largeMark every 65536 indices, and one smallMark every 512
  */
 template <size_t AlphabetSize>
-class fm_index {	
+class fm_index {
 	public:
+		//! \brief define an array of numbers for each alphabet character
+		typedef alpha_count<uint64_t,AlphabetSize> alpha_count64;
+	
 		//! \brief construct an object reading the bwt from the input range
 		template<typename InputIterator>
 		fm_index(InputIterator first,InputIterator last);
@@ -36,13 +67,33 @@ class fm_index {
 		size_t alphabet_size() const {return AlphabetSize;}
 		//! \return total number of symbol in the bwt string
 		inline uint64_t size() const {return _bwt_size;}
-    //! \return number of occurence of symbols [0..c) in bwt
-    inline uint64_t C(uint8_t c) const {return (c<_C.size())?_C[c]:size();}
+
+		//! \brief number of occurence of symbols [0..c) in bwt string. This is a public class attribute but should not be modified externaly
+		alpha_count64 C; 
+
     //! \return number of occurence of symbol c in bwt[0..i]
-    inline uint64_t occ(const uint8_t c, const uint64_t i) const {return mark_at(i).counts[c];}
+    inline alpha_count64 occ(const uint64_t i) const {return mark_at(i).counts;}
+    
 		//! \return bwt[i], the ith character of bwt string
     inline uint8_t operator[](const uint64_t i) const {return _runs[mark_at(i).run_index].value();}
 
+		//! \brief extend the interval [first,last) corresponding to string "S"" by 1 character so it corresponds to string "cS"
+		inline void extend_backward(alpha_count64& low,alpha_count64& high, uint64_t first, uint64_t last) {
+				if (first>=last) {
+						extend_backward(low,high);
+				} else {
+						//NOTE: computation of occ(.,last) might be faster using occ(.,first)
+						low = high = C;
+						if (first>0) low += occ(first-1);
+						high += occ(last-1);
+				}	
+		}
+		inline void extend_backward(alpha_count64& low,alpha_count64& high) {				
+				low = C;
+				std::copy(C.begin()+1,C.end(),high.begin());
+				high.back() = size();
+		}
+		inline void extend_backward(alpha_count64& low,alpha_count64& high, uint8_t b) {extend_backward(low,high,low[b],high[b]);}
 
 		//! \brief output debugging informations to the given stream
 		void print_debug_info(std::ostream& os);
@@ -51,8 +102,7 @@ class fm_index {
 			//
 			// types definitions
 			//
-			typedef std::array<uint64_t,AlphabetSize> alpha_count64;
-			typedef std::array<uint16_t,AlphabetSize> alpha_count16;
+			typedef alpha_count<uint16_t,AlphabetSize> alpha_count16;
 			template <typename T1,typename T2> 
 			struct mark_t {
 					T1 run_index;
@@ -82,7 +132,6 @@ class fm_index {
 			//
 			uint64_t _bwt_size=0;
 			std::vector<run_t> _runs; // rle encoded bwt string
-			alpha_count64 _C;
 			std::vector<mark64_t> _marks64; // _marks64[i] stores the index I=run_index(bwt[k]) for k=i*65536, and occ(.,I)
 			std::vector<mark16_t> _marks16; // _marks16[i] stores the index I=run_index(bwt[k]) for k=i*512, and occ(.,I) expressed relatively to the preceeding _marks64
 
@@ -93,7 +142,7 @@ class fm_index {
 					auto m64 = _marks64[i>>shift64];
 					const auto& m16 = _marks16[i>>shift16];
 					m64.run_index += m16.run_index;
-					std::transform(m64.counts.begin(),m64.counts.end(),m16.counts.begin(),m64.counts.begin(),std::plus<uint64_t>());
+					m64.counts += m16.counts;
 					return m64;
 			}
 			
@@ -101,7 +150,7 @@ class fm_index {
 	    inline mark64_t mark_at(const uint64_t i) const {
 	    		auto mark = previous_mark(i);
 	    		auto run = _runs.begin() + mark.run_index;
-	    		auto run_first = std::accumulate(mark.counts.begin(),mark.counts.end(),0);
+	    		auto run_first = mark.counts.sum();
 	    		while(true) {
 	    				auto run_len = run->length();
 	    				if (i < run_first + run_len) break;
@@ -157,16 +206,16 @@ void fm_index<AlphabetSize>::init_fm_from_runs() {
 		_marks64.reserve((size()>>shift64) + 1);
   	_marks16.reserve((size()>>shift16) + 1);
   	
-		std::fill(_C.begin(),_C.end(),0);
+		std::fill(C.begin(),C.end(),0);
 		uint64_t run_index=0;
 		uint64_t run_pos=0;
 		for(auto run:_runs) {
-				if (run_pos >= _marks64.size()<<shift64) _marks64.push_back(mark64_t(run_index,_C));
+				if (run_pos >= _marks64.size()<<shift64) _marks64.push_back(mark64_t(run_index,C));
 				if (run_pos >= _marks16.size()<<shift16) {
 						_marks16.push_back(mark16_t(run_index - _marks64.back().run_index));
-						std::transform(_C.begin(),_C.end(),_marks64.back().counts.begin(),_marks16.back().counts.begin(),std::minus<uint64_t>());
+						std::transform(C.begin(),C.end(),_marks64.back().counts.begin(),_marks16.back().counts.begin(),std::minus<uint64_t>());
 				}
-				_C[run.value()] += run.length();
+				C[run.value()] += run.length();
 				run_pos += run.length();
 				++run_index;
 		}
@@ -174,7 +223,7 @@ void fm_index<AlphabetSize>::init_fm_from_runs() {
 		// C[c] is the count symbol c in bwt string
 		// transform it into the count of lexicography smaller symbols [0..c)
 		uint64_t s = 0;
-		for(auto& i:_C) {
+		for(auto& i:C) {
 				auto v = i;
 				i = s;
 				s += v;

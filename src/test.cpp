@@ -3,7 +3,6 @@
 #include <fstream>
 #include <algorithm>
 #include <fm_index.h>
-#include <algo.h>
 
 
 int test_fm() {
@@ -17,22 +16,34 @@ int test_fm() {
 		fm.print_debug_info(std::cout);
 		
 		std::cout << "C[]:" << std::endl;
-		for(auto c:{0,1,2,3,4,5}) std::cout << fm.C(c) << ' ';
+		for(auto c:fm.C) std::cout << c << ' ';
 		std::cout << std::endl;
 
 		std::cout << "occ[c,i]:" << std::endl;
 		for(auto c:{0,1,2,3,4,5}) {
-				for(auto i=0;i<bwt.size();i++) std::cout << fm.occ(c,i);
+				for(auto i=0;i<bwt.size();i++) std::cout << fm.occ(i)[c];
 				std::cout << std::endl;
 		}
 		
-		bwt::interval rg1;
-		bwt::update_interval(rg1, fm, encode('a'));
-		assert(rg1.first==1 && rg1.last==6);
-		bwt::update_interval(rg1, fm, encode('r'));
-		assert(rg1.first==10 && rg1.last==12);
-		bwt::update_interval(rg1, fm, encode('b'));
-		assert(rg1.first==6 && rg1.last==8);
+		
+		
+		uint8_t c;
+		decltype(fm)::alpha_count64 low;
+		decltype(fm)::alpha_count64 high;
+		
+		fm.extend_backward(low,high);
+		
+		c = encode('a');
+		assert(low[c]==1 && high[c]==6);
+		fm.extend_backward(low,high,c);
+		
+		c = encode('r');
+		assert(low[c]==10 && high[c]==12);
+		
+		
+		fm.extend_backward(low,high,c);
+		c = encode('b');
+		assert(low[c]==6 && high[c]==8);
 		
 		return 0;
 }
