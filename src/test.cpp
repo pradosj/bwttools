@@ -27,11 +27,11 @@ int test_fm() {
 		}
 		
 		bwt::interval rg1;
-		bwt::update_sa_interval(rg1, fm, encode('a'));
+		bwt::update_interval(rg1, fm, encode('a'));
 		assert(rg1.first==1 && rg1.last==6);
-		bwt::update_sa_interval(rg1, fm, encode('r'));
+		bwt::update_interval(rg1, fm, encode('r'));
 		assert(rg1.first==10 && rg1.last==12);
-		bwt::update_sa_interval(rg1, fm, encode('b'));
+		bwt::update_interval(rg1, fm, encode('b'));
 		assert(rg1.first==6 && rg1.last==8);
 		
 		return 0;

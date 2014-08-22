@@ -119,7 +119,7 @@ void traverse_kmer(dna_indices& bwts, unsigned int k) {
             // not yet a suffix of size k, push next candidates
             for(size_t i = 1; i < alphabet.size(); ++i) {
                 stack_elt_t e(top);
-                bwt::update_sa_interval(e.range,*bwts[0],i);
+                bwt::update_interval(e.range,*bwts[0],i);
                 if (!e.range.empty()) {
                 		e.path.push_back(i);
                 		stack.push(e);

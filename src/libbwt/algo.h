@@ -23,16 +23,17 @@ struct interval {
 
 
 
-//! \brief update a suffix array interval using backwards search
-//! if the given interval corresponds to string "S", it will be updated for string "bS"
-//! if the given interval is empty, it will be initialized for string "b"
+/*! \brief update a suffix array interval using backwards search
+ *  if the interval is empty, it will be initialized for string "b"
+ *  if the interval corresponds to string "S", it will be updated for string "bS"
+*/
 template <size_t AlphabetSize>
-inline void update_sa_interval(interval& interval, const fm_index<AlphabetSize>& fm, const uint8_t b) {
-		//NOTE: computation of occ(.,last) might be faster using occ(.,first)
+inline void update_interval(interval& interval, const fm_index<AlphabetSize>& fm, const uint8_t b) {
 		if (interval.empty()) {
 				interval.first = fm.C(b);
 				interval.last = fm.C(b+1);
 		} else {
+			//NOTE: computation of occ(.,last) might be faster using occ(.,first)
 			interval.first = fm.C(b) + (interval.first>0?fm.occ(b,interval.first-1):0);
 	    interval.last = fm.C(b) + fm.occ(b,interval.last-1);
 		}
