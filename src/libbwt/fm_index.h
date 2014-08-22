@@ -6,13 +6,13 @@
 #include <numeric>
 #include <vector>
 #include <cassert>
-#include <string>
 #include <array>
 #include <istream>
 #include <iostream>
-#include <inttypes.h>	
+#include <cinttypes>	
 
 
+namespace bwt {
 
 
 /*! \class fm_index
@@ -37,7 +37,7 @@ class fm_index {
 		//! \return total number of symbol in the bwt string
 		inline uint64_t size() const {return _bwt_size;}
     //! \return number of occurence of symbols [0..c) in bwt
-    inline uint64_t C(uint8_t c) const {return _C[c];}
+    inline uint64_t C(uint8_t c) const {return (c<_C.size())?_C[c]:size();}
     //! \return number of occurence of symbol c in bwt[0..i]
     inline uint64_t occ(const uint8_t c, const uint64_t i) const {return mark_at(i).counts[c];}
 		//! \return bwt[i], the ith character of bwt string
@@ -194,8 +194,9 @@ size_t fm_index<AlphabetSize>::read_runs(std::istream& is) {
     is.read(reinterpret_cast<char*>(&num_symbols), sizeof(num_symbols));
     is.read(reinterpret_cast<char*>(&num_runs), sizeof(num_runs));
     is.read(reinterpret_cast<char*>(&flag), sizeof(flag));
-		std::cout << "#symbols:" << num_symbols << std::endl;
-		std::cout << "#strings:" << num_strings << std::endl;			    
+		std::cerr << "#symbols:" << num_symbols << std::endl;
+		std::cerr << "#strings:" << num_strings << std::endl;
+		std::cerr << "#run:" << num_runs << std::endl;
     _runs.clear();
 		_runs.resize(num_runs);
 		is.read(reinterpret_cast<char*>(&_runs[0]), num_runs*sizeof(_runs[0]));
@@ -212,5 +213,6 @@ void fm_index<AlphabetSize>::print_debug_info(std::ostream& os) {
 		os << "#marks16:" << _marks16.size() << " (" << (double) _marks16.size() * sizeof(mark16_t)/1024/1024 << "Mo)" << std::endl;
 }
 
+};
 
 #endif

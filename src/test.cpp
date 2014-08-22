@@ -13,7 +13,7 @@ int test_fm() {
 
 		std::string bwt("ard$rcaaaabb");
 		std::transform(bwt.begin(),bwt.end(),bwt.begin(),encode);
-		fm_index<6> fm(bwt.begin(),bwt.end());
+		bwt::fm_index<6> fm(bwt.begin(),bwt.end());
 		fm.print_debug_info(std::cout);
 		
 		std::cout << "C[]:" << std::endl;
@@ -26,18 +26,13 @@ int test_fm() {
 				std::cout << std::endl;
 		}
 		
-		interval rg1 = sa_interval(fm, encode('a'));
+		bwt::interval rg1;
+		bwt::update_sa_interval(rg1, fm, encode('a'));
 		assert(rg1.first==1 && rg1.last==6);
-		update_sa_interval(rg1, fm, encode('r'));
+		bwt::update_sa_interval(rg1, fm, encode('r'));
 		assert(rg1.first==10 && rg1.last==12);
-		update_sa_interval(rg1, fm, encode('b'));
+		bwt::update_sa_interval(rg1, fm, encode('b'));
 		assert(rg1.first==6 && rg1.last==8);
-		
-		interval rg2 = sa_interval(fm);
-		update_sa_interval(rg2, fm, encode('a'));
-		update_sa_interval(rg2, fm, encode('r'));
-		update_sa_interval(rg2, fm, encode('b'));
-		assert(rg1==rg2);
 		
 		return 0;
 }
