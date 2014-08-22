@@ -16,10 +16,8 @@
 
 
 /*! \class fm_index
- *  \brief Run-length encoded Burrows Wheeler transform
- *  set one largeMark every 65536 indices, and one smallMark every 512
- *  _marks64[i] stores occ(.,k) and run_index(bwt[k]), for k=i*65536
- *  _marks16[i] stores occ(.,k) and run_index(bwt[k]), for k=i*512 express relatively to the corresponding _marks64
+ *  \brief FM index with an internal run-length encoded Burrows Wheeler Transform string
+ *         To speed up random access, the class store one largeMark every 65536 indices, and one smallMark every 512
  */
 template <size_t AlphabetSize>
 class fm_index {	
@@ -40,34 +38,14 @@ class fm_index {
 		inline uint64_t size() const {return _bwt_size;}
     //! \return number of occurence of symbols [0..c) in bwt
     inline uint64_t C(uint8_t c) const {return _C[c];}
-
-    //! \return ith bwt symbol
-    inline uint8_t operator[](uint64_t i) const;
-
-
     //! \return number of occurence of symbol c in bwt[0..i]
-    inline uint64_t occ(uint8_t c, uint64_t i) const {
-    		auto mark = previous_mark(i);
-    		auto run = _runs.begin() + mark.run_index;
-    		auto run_pos = std::accumulate(mark.counts.begin(),mark.counts.end(),0);
-    		while(i >= run_pos + run->length()) {
-    				run_pos += run->length();
-    				mark.counts[run->value()] += run->length();
-    				//++mark.run_index;
-    				++run;
-    		}
-    		mark.counts[run->value()] += (i-run_pos+1);
-    		return mark.counts[c];
-    }
+    inline uint64_t occ(const uint8_t c, const uint64_t i) const {return mark_at(i).counts[c];}
+		//! \return bwt[i], the ith character of bwt string
+    inline uint8_t operator[](const uint64_t i) const {return _runs[mark_at(i).run_index].value();}
 
 
-		void print_info(std::ostream& os) {
-				os << "size:" << size() << std::endl;
-				os << "#run:" << _runs.size() << std::endl;
-				os << "avg run size:" << (double)size() / _runs.size() << std::endl;
-				os << "#marks64:" << _marks64.size() << " (" << (double) _marks64.size() * sizeof(mark64_t)/1024/1024 << "Mo)" << std::endl;
-				os << "#marks16:" << _marks16.size() << " (" << (double) _marks16.size() * sizeof(mark16_t)/1024/1024 << "Mo)" << std::endl;
-		}
+		//! \brief output debugging informations to the given stream
+		void print_debug_info(std::ostream& os);
 		
 	private:
 			//
@@ -105,14 +83,12 @@ class fm_index {
 			uint64_t _bwt_size=0;
 			std::vector<run_t> _runs; // rle encoded bwt string
 			alpha_count64 _C;
-			std::vector<mark64_t> _marks64;
-			std::vector<mark16_t> _marks16;
-			
+			std::vector<mark64_t> _marks64; // _marks64[i] stores the index I=run_index(bwt[k]) for k=i*65536, and occ(.,I)
+			std::vector<mark16_t> _marks16; // _marks16[i] stores the index I=run_index(bwt[k]) for k=i*512, and occ(.,I) expressed relatively to the preceeding _marks64
+
 			
 
-			/*! \return the run index containg the mark preceding i and 
-			 *          occ(.,k) where k is the index of the first symbol of the run
-			*/
+			//! \return the run index of the mark preceding i, and occ(.,k) where k is the index of the first symbol of the run
 			inline mark64_t previous_mark(uint64_t i) const {
 					auto m64 = _marks64[i>>shift64];
 					const auto& m16 = _marks16[i>>shift16];
@@ -121,12 +97,42 @@ class fm_index {
 					return m64;
 			}
 			
+	    //! \return the run index containing symbol i and occ(.,i)
+	    inline mark64_t mark_at(const uint64_t i) const {
+	    		auto mark = previous_mark(i);
+	    		auto run = _runs.begin() + mark.run_index;
+	    		auto run_first = std::accumulate(mark.counts.begin(),mark.counts.end(),0);
+	    		while(true) {
+	    				auto run_len = run->length();
+	    				if (i < run_first + run_len) break;
+	    				run_first += run_len;
+	    				mark.counts[run->value()] += run_len;
+	    				++mark.run_index;
+	    				++run;
+	    		}
+	    		mark.counts[run->value()] += (i+1-run_first);
+	    		return mark;
+	    }			
+			
+			
 			//! \brief iterate over _runs to initialize _C, bwt_size, _marks16 and marks64
 	    void init_fm_from_runs();
 			
 			//! \brief read rle encoded runs from an input stream
 			size_t read_runs(std::istream& is);	    
 };
+
+
+
+
+
+
+
+////////////////////////////////////////////////
+//
+// fm_index class implementation
+//
+////////////////////////////////////////////////
 
 
 template <size_t AlphabetSize>
@@ -194,6 +200,16 @@ size_t fm_index<AlphabetSize>::read_runs(std::istream& is) {
 		_runs.resize(num_runs);
 		is.read(reinterpret_cast<char*>(&_runs[0]), num_runs*sizeof(_runs[0]));
 		return num_symbols;
+}
+
+
+template <size_t AlphabetSize>
+void fm_index<AlphabetSize>::print_debug_info(std::ostream& os) {
+		os << "size:" << size() << std::endl;
+		os << "#run:" << _runs.size() << std::endl;
+		os << "avg run size:" << (double)size() / _runs.size() << std::endl;
+		os << "#marks64:" << _marks64.size() << " (" << (double) _marks64.size() * sizeof(mark64_t)/1024/1024 << "Mo)" << std::endl;
+		os << "#marks16:" << _marks16.size() << " (" << (double) _marks16.size() * sizeof(mark16_t)/1024/1024 << "Mo)" << std::endl;
 }
 
 

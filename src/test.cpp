@@ -8,11 +8,13 @@
 
 int test_fm() {
 		const std::string alphabet("$abcdr");
-		std::string bwt("ard$rcaaaabb");
 		auto encode = [&](char c){return alphabet.find(c);};
+		auto decode = [&](char c){return alphabet[c];};
+
+		std::string bwt("ard$rcaaaabb");
 		std::transform(bwt.begin(),bwt.end(),bwt.begin(),encode);
 		fm_index<6> fm(bwt.begin(),bwt.end());
-		fm.print_info(std::cout);
+		fm.print_debug_info(std::cout);
 		
 		std::cout << "C[]:" << std::endl;
 		for(auto c:{0,1,2,3,4,5}) std::cout << fm.C(c) << ' ';
@@ -37,10 +39,6 @@ int test_fm() {
 		update_sa_interval(rg2, fm, encode('b'));
 		assert(rg1==rg2);
 		
-/*
-		std::ifstream f(argv[1],std::ios::binary);
-		fm_index<5> fm(f);
-*/
 		return 0;
 }
 
