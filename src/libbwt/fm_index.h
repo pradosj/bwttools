@@ -86,37 +86,6 @@ namespace bwt {
     //! \return bwt[i], the ith character of bwt string
     inline uint8_t operator[](const uint64_t i) const {return _runs[mark_at(i).run_index].value();}
     
-    /*! \brief 1-character prefix extension of the interval [first,last) corresponding to string "S"
-     *         Extension is done with all characters of the alphabet.
-     *         Bounds of the extended intervals are set in [low[c],high[c])
-     */
-    inline void extend_backward(alpha_count64& low,alpha_count64& high, uint64_t first, uint64_t last) {
-      if (first>=last) {
-	extend_backward(low,high);
-      } else {
-	//NOTE: computation of occ(.,last) might be faster using occ(.,first)
-	low = high = C;
-	if (first>0) low += occ(first-1);
-	high += occ(last-1);
-      }	
-    }
-    
-    /*! \brief 1-character prefix extension of the interval [low[b],high[b]) corresponding to string "S"
-     *         Extension is done with all characters of the alphabet.
-     *         Bounds of the extended intervals are set in [low[c],high[c])
-     */
-    inline void extend_backward(alpha_count64& low,alpha_count64& high, uint8_t b) {
-      extend_backward(low,high,low[b],high[b]);
-    }
-    
-    /*! \brief initialize the intervals [low[c],high[c]) with a the 1 character string "c"
-     */	
-    inline void extend_backward(alpha_count64& low,alpha_count64& high) {				
-      low = C;
-      std::copy(C.begin()+1,C.end(),high.begin());
-      high.back() = size();
-    }
-    
     
     //! \brief output debugging informations to the given stream
     void print_debug_info(std::ostream& os);

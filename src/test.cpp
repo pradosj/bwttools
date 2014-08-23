@@ -3,7 +3,7 @@
 #include <fstream>
 #include <algorithm>
 #include <fm_index.h>
-
+#include <algo.h>
 
 int test_fm() {
 		const std::string alphabet("$abcdr");
@@ -31,17 +31,17 @@ int test_fm() {
 		decltype(fm)::alpha_count64 low;
 		decltype(fm)::alpha_count64 high;
 		
-		fm.extend_backward(low,high);
+		bwt::init_char_range(fm,low,high);
 		
 		c = encode('a');
 		assert(low[c]==1 && high[c]==6);
-		fm.extend_backward(low,high,c);
+		extend_lhs(fm,low,high,c);
 		
 		c = encode('r');
 		assert(low[c]==10 && high[c]==12);
 		
 		
-		fm.extend_backward(low,high,c);
+		extend_lhs(fm,low,high,c);
 		c = encode('b');
 		assert(low[c]==6 && high[c]==8);
 		

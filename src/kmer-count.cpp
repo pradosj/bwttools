@@ -8,7 +8,7 @@
 #include <cinttypes>
 
 #include <fm_index.h>
-
+#include <algo.h>
 
 
 
@@ -102,7 +102,7 @@ struct stack_elt_t {
 void traverse_kmer(dna_indices& bwts, unsigned int k) {
     std::stack< stack_elt_t > stack;
 		stack.push(stack_elt_t());
-		bwts[0]->extend_backward(stack.top().lb,stack.top().ub);
+		bwt::init_char_range(*bwts[0],stack.top().lb,stack.top().ub);
 
     // Perform the kmer search
     while(!stack.empty()) {
@@ -118,7 +118,7 @@ void traverse_kmer(dna_indices& bwts, unsigned int k) {
 				            std::transform(e.path.begin(),e.path.end(),e.path.begin(),decode);
 				            std::cout << e.path << '\t' << (e.ub[i]-e.lb[i]) << std::endl;
 				        } else {
-		                bwts[0]->extend_backward(e.lb,e.ub,i);
+		                bwt::extend_lhs(*bwts[0],e.lb,e.ub,i);
 		                stack.push(e);
 				        }
         		}
