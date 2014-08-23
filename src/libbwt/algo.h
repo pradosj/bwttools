@@ -1,3 +1,6 @@
+#ifndef ALGO_H
+#define ALGO_H
+
 #include "fm_index.h"
 
 namespace bwt {
@@ -9,7 +12,7 @@ namespace bwt {
     inline void init_char_range(const fm_index<sz>& fm, typename fm_index<sz>::alpha_count64& low, typename fm_index<sz>::alpha_count64& high) {				
       low = fm.C;
       std::copy(fm.C.begin()+1,fm.C.end(),high.begin());
-      high.back() = fm.size();
+      high.back() = fm.bwt.size();
     }
 	
     /*! \brief 1-character prefix extension of the interval [first,last) corresponding to string "S"
@@ -42,4 +45,4 @@ namespace bwt {
 
 
 
-
+#endif

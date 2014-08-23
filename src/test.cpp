@@ -10,9 +10,12 @@ int test_fm() {
 		auto encode = [&](char c){return alphabet.find(c);};
 		auto decode = [&](char c){return alphabet[c];};
 
-		std::string bwt("ard$rcaaaabb");
-		std::transform(bwt.begin(),bwt.end(),bwt.begin(),encode);
-		bwt::fm_index<6> fm(bwt.begin(),bwt.end());
+		std::string str("ard$rcaaaabb");
+		std::transform(str.begin(),str.end(),str.begin(),encode);
+		bwt::rle_string bwt(str.begin(),str.end());
+		bwt.print_debug_info(std::cout);
+		
+		bwt::fm_index<6> fm(bwt);
 		fm.print_debug_info(std::cout);
 		
 		std::cout << "C[]:" << std::endl;
