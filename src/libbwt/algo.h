@@ -2,7 +2,8 @@
 
 namespace bwt {
 
-		/*! \brief initialize the intervals [low[c],high[c]) with a the 1 character string "c"
+		/*! \brief initialize the intervals [low[c],high[c]) with the 1-character string "c"
+		 *         for each character of the alphabet
      */
     template<size_t sz>
     inline void init_char_range(const fm_index<sz>& fm, typename fm_index<sz>::alpha_count64& low, typename fm_index<sz>::alpha_count64& high) {				
@@ -22,8 +23,8 @@ namespace bwt {
       } else {
 				//NOTE: computation of occ(.,last) might be faster using occ(.,first)
 				low = high = fm.C;
-				if (first>0) low += fm.occ(first-1);
-				high += fm.occ(last-1);
+				if (first>0) std::transform(low.begin(),low.end(),fm.occ(first-1).begin(),low.begin(),std::plus<uint64_t>());
+				std::transform(high.begin(),high.end(),fm.occ(last-1).begin(),high.begin(),std::plus<uint64_t>());
       }	
     }
     
@@ -38,3 +39,7 @@ namespace bwt {
     
     
 };
+
+
+
+

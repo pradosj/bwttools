@@ -15,55 +15,21 @@
 namespace bwt {
 
 
-  /*! \class alpha_count
-   *  \brief store a number for each character of the alphabet
-   */
-  template<typename T,size_t sz>
-    struct alpha_count : std::array<T,sz> {
-    
-    inline T sum() const {
-      return std::accumulate(this->begin(),this->end(),0);
-    }
-    
-    template<typename T2>
-      inline alpha_count& operator+=(const alpha_count<T2,sz>& n) {
-      std::transform(n.begin(),n.end(),this->begin(),this->begin(),std::plus<T>());
-      return *this;
-    }
-    
-    template<typename T2>
-      inline alpha_count& operator=(const T2& n) {
-      std::fill(this->begin(),this->end(),n);
-      return *this;
-    }
-    
-    friend inline std::ostream& operator<<(std::ostream& os,const alpha_count& o) {
-      os << '[';
-      for(auto c:o) os << c << ',';
-      os << ']';
-      return os;
-    }
-  };
-
-
   /*! \class fm_index
    *  \brief FM index with an internal run-length encoded Burrows Wheeler Transform string
    *         To speed up random access, the class store one largeMark every 65536 indices, and one smallMark every 512
    */
   template <size_t AlphabetSize>
-    class fm_index {
+  class fm_index {
   public:
-    /*! \brief define an array of numbers for each alphabet character
-     */
-    typedef alpha_count<uint64_t,AlphabetSize> alpha_count64;
+    //! \brief define an array of numbers for each alphabet character
+    typedef std::array<uint64_t,AlphabetSize> alpha_count64;
     
-    /*! \brief construct an object reading the bwt from the input range
-     */
+    //! \brief construct an object reading the bwt from the input range
     template<typename InputIterator>
       fm_index(InputIterator first,InputIterator last);
     
-    /*! \brief construct an object by reading the rle-encoded bwt string from a binary stream
-     */
+    //! \brief construct an object by reading the rle-encoded bwt string from a binary stream
     fm_index(std::istream& is) {
       _bwt_size = read_runs(is);
       init_fm_from_runs();
@@ -100,14 +66,14 @@ namespace bwt {
     //
     // internal types definitions
     //
-    typedef alpha_count<uint16_t,AlphabetSize> alpha_count16;
+    typedef std::array<uint16_t,AlphabetSize> alpha_count16;
     template <typename T1,typename T2> 
-      struct mark_t {
-	T1 run_index;
-	T2 counts;
+    struct mark_t {
+			T1 run_index;
+			T2 counts;
       mark_t(T1 i,T2 c):run_index(i),counts(c) {}
       mark_t(T1 i):run_index(i) {}
-      };
+    };
     typedef mark_t<uint64_t,alpha_count64> mark64_t;
     typedef mark_t<uint16_t,alpha_count16> mark16_t;
     struct run_t {
@@ -130,31 +96,28 @@ namespace bwt {
     std::vector<mark16_t> _marks16; // _marks16[i] stores the index I=run_index(bwt[k]) for k=i*512, and occ(.,I) expressed relatively to the preceeding _marks64
     
     
-    
-    //! \return the run index of the mark preceding i, and occ(.,k) where k is the index of the first symbol of the run
-    inline mark64_t previous_mark(uint64_t i) const {
+        
+    //! \return the run index containing symbol i and occ(.,i)
+    inline mark64_t mark_at(const uint64_t i) const {
+    	// retreive the preeceding mark
       auto m64 = _marks64[i>>shift64];
       const auto& m16 = _marks16[i>>shift16];
       m64.run_index += m16.run_index;
-      m64.counts += m16.counts;
-      return m64;
-    }
-    
-    //! \return the run index containing symbol i and occ(.,i)
-    inline mark64_t mark_at(const uint64_t i) const {
-      auto mark = previous_mark(i);
-      auto run = _runs.begin() + mark.run_index;
-      auto run_first = mark.counts.sum();
+      std::transform(m64.counts.begin(),m64.counts.end(),m16.counts.begin(),m64.counts.begin(),std::plus<uint64_t>());
+    	
+    	// interpolate the mark to the requested position
+      auto run = _runs.begin() + m64.run_index;
+      auto run_first = std::accumulate(m64.counts.begin(),m64.counts.end(),0);
       while(true) {
-	auto run_len = run->length();
-	if (i < run_first + run_len) break;
-	run_first += run_len;
-	mark.counts[run->value()] += run_len;
-	++mark.run_index;
-	++run;
+				auto run_len = run->length();
+				if (i < run_first + run_len) break;
+				run_first += run_len;
+				m64.counts[run->value()] += run_len;
+				++m64.run_index;
+				++run;
       }
-      mark.counts[run->value()] += (i+1-run_first);
-      return mark;
+      m64.counts[run->value()] += (i+1-run_first);
+      return m64;
     }			
     
     
@@ -179,15 +142,15 @@ namespace bwt {
   
   
   template <size_t AlphabetSize>
-    template<typename InputIterator>
-    fm_index<AlphabetSize>::fm_index(InputIterator first,InputIterator last) {
+  template<typename InputIterator>
+  fm_index<AlphabetSize>::fm_index(InputIterator first,InputIterator last) {
     for(;first != last;first++) {
       if (_runs.empty()) {
-	_runs.push_back(*first);
+				_runs.push_back(*first);
       } else if (!_runs.back().full() && _runs.back().value()==*first) {
-	++_runs.back();
+				++_runs.back();
       } else {
-	_runs.push_back(*first);
+				_runs.push_back(*first);
       }
       _bwt_size++;
     }
@@ -196,18 +159,18 @@ namespace bwt {
   
 
   template <size_t AlphabetSize>
-    void fm_index<AlphabetSize>::init_fm_from_runs() {
+  void fm_index<AlphabetSize>::init_fm_from_runs() {
     _marks64.reserve((size()>>shift64) + 1);
     _marks16.reserve((size()>>shift16) + 1);
     
-    C = 0;
+    std::fill(C.begin(),C.end(),0);
     uint64_t run_index=0;
     uint64_t run_pos=0;
     for(auto run:_runs) {
       if (run_pos >= _marks64.size()<<shift64) _marks64.push_back(mark64_t(run_index,C));
       if (run_pos >= _marks16.size()<<shift16) {
-	_marks16.push_back(mark16_t(run_index - _marks64.back().run_index));
-	std::transform(C.begin(),C.end(),_marks64.back().counts.begin(),_marks16.back().counts.begin(),std::minus<uint64_t>());
+				_marks16.push_back(mark16_t(run_index - _marks64.back().run_index));
+				std::transform(C.begin(),C.end(),_marks64.back().counts.begin(),_marks16.back().counts.begin(),std::minus<uint64_t>());
       }
       C[run.value()] += run.length();
       run_pos += run.length();
