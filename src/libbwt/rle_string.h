@@ -24,9 +24,7 @@ namespace bwt {
 	/*! \class rle_string
 	 *  \brief run length encoded string
 	 */
-	struct rle_string {
-    std::vector<run_t> runs;
-        
+	struct rle_string {        
     //! \brief construct an object reading the bwt from the input range
     template<typename InputIterator>
     rle_string(InputIterator first,InputIterator last);
@@ -37,29 +35,33 @@ namespace bwt {
     //! \return total number of symbol in the bwt string
     inline uint64_t size() const {return _size;}
 
+		//! return the collection of rle runs
+		inline const std::vector<run_t>& runs() const {return _runs;}
+
     //! \brief empty the string
-    void clear() {runs.clear();_size = 0;}
+    void clear() {_runs.clear();_size = 0;}
     
     //! \brief append a character at the end of the string
     void push_back(uint8_t v) {
-      if (runs.empty()) {
-				runs.push_back(v);
-      } else if (!runs.back().full() && runs.back().value()==v) {
-				++runs.back();
+      if (_runs.empty()) {
+				_runs.push_back(v);
+      } else if (!_runs.back().full() && _runs.back().value()==v) {
+				++_runs.back();
       } else {
-				runs.push_back(v);
+				_runs.push_back(v);
       }
       _size++;
     }
 
 	  void print_debug_info(std::ostream& os) const {
 	    os << "size:" << size() << std::endl;
-	    os << "#run:" << runs.size() << std::endl;
-	    os << "avg run size:" << (double) size() / runs.size() << std::endl;
+	    os << "#run:" << _runs.size() << std::endl;
+	    os << "avg run size:" << (double) size() / _runs.size() << std::endl;
 	  }
 
   private:
   	uint64_t _size = 0;
+  	std::vector<run_t> _runs;
   	
     //! \brief read rle encoded runs from an input stream
     size_t read_runs(std::istream& is);
@@ -90,9 +92,9 @@ namespace bwt {
     std::cerr << "#symbols:" << num_symbols << std::endl;
     std::cerr << "#strings:" << num_strings << std::endl;
     std::cerr << "#run:" << num_runs << std::endl;
-    runs.clear();
-    runs.resize(num_runs);
-    is.read(reinterpret_cast<char*>(&runs[0]), num_runs*sizeof(runs[0]));
+    _runs.clear();
+    _runs.resize(num_runs);
+    is.read(reinterpret_cast<char*>(&_runs[0]), num_runs*sizeof(_runs[0]));
     return num_symbols;
   }
   

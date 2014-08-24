@@ -50,7 +50,7 @@ namespace bwt {
     const alpha_count64& C() const {return _C;}
     
     //! \return bwt[i], the ith character of bwt string
-    inline uint8_t operator[](const uint64_t i) const {return _bwt.runs[mark_at(i).run_index].value();}
+    inline uint8_t operator[](const uint64_t i) const {return _bwt.runs()[mark_at(i).run_index].value();}
     
     //! \brief output debugging informations to the given stream
     void print_debug_info(std::ostream& os) const;
@@ -96,7 +96,7 @@ namespace bwt {
       std::transform(m64.counts.begin(),m64.counts.end(),m16.counts.begin(),m64.counts.begin(),std::plus<uint64_t>());
     	
     	// interpolate the mark to the requested position
-      auto run = _bwt.runs.begin() + m64.run_index;
+      auto run = _bwt.runs().begin() + m64.run_index;
       auto run_first = std::accumulate(m64.counts.begin(),m64.counts.end(),0);
       while(true) {
 				auto run_len = run->length();
@@ -131,7 +131,7 @@ namespace bwt {
     std::fill(_C.begin(),_C.end(),0);
     uint64_t run_index=0;
     uint64_t run_pos=0;
-    for(auto run:bwt.runs) {
+    for(auto run:bwt.runs()) {
       if (run_pos >= _marks64.size()<<shift64) _marks64.push_back(mark64_t(run_index,C()));
       if (run_pos >= _marks16.size()<<shift16) {
 				_marks16.push_back(mark16_t(run_index - _marks64.back().run_index));
