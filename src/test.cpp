@@ -19,7 +19,7 @@ int test_fm() {
 		fm.print_debug_info(std::cout);
 		
 		std::cout << "C[]:" << std::endl;
-		for(auto c:fm.C) std::cout << c << ' ';
+		for(auto c:fm.C()) std::cout << c << ' ';
 		std::cout << std::endl;
 
 		std::cout << "occ[c,i]:" << std::endl;

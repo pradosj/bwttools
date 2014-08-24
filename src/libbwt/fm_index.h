@@ -28,15 +28,7 @@ namespace bwt {
     //  
     //! \brief define an array of numbers for each alphabet character
     typedef std::array<uint64_t,AlphabetSize> alpha_count64;
-    
-    //
-    // public attributes
-    //
-    //! \brief the rle_string indexed by the object and storing the BWT
-    const rle_string& bwt;
-    //! \brief number of occurence of symbols [0..c) in bwt string.
-    alpha_count64 C;
-    
+        
     //
     // constructors
     //
@@ -51,8 +43,14 @@ namespace bwt {
     //! \return number of occurence of symbol c in bwt[0..i]
     inline alpha_count64 occ(const uint64_t i) const {return mark_at(i).counts;}
     
+    //! \brief the rle_string indexed by the object and storing the BWT
+    const rle_string& bwt() const {return _bwt;}
+    
+    //! \brief number of occurence of symbols [0..c) in bwt string.
+    const alpha_count64& C() const {return _C;}
+    
     //! \return bwt[i], the ith character of bwt string
-    inline uint8_t operator[](const uint64_t i) const {return bwt.runs[mark_at(i).run_index].value();}
+    inline uint8_t operator[](const uint64_t i) const {return _bwt.runs[mark_at(i).run_index].value();}
     
     //! \brief output debugging informations to the given stream
     void print_debug_info(std::ostream& os) const;
@@ -83,7 +81,8 @@ namespace bwt {
     //
     std::vector<mark64_t> _marks64; // _marks64[i] stores the index I=run_index(bwt[k]) for k=i*65536, and occ(.,I)
     std::vector<mark16_t> _marks16; // _marks16[i] stores the index I=run_index(bwt[k]) for k=i*512, and occ(.,I) expressed relatively to the preceeding _marks64
-    
+    const rle_string& _bwt;
+    alpha_count64 _C;
     
     //
     // internal methods
@@ -97,7 +96,7 @@ namespace bwt {
       std::transform(m64.counts.begin(),m64.counts.end(),m16.counts.begin(),m64.counts.begin(),std::plus<uint64_t>());
     	
     	// interpolate the mark to the requested position
-      auto run = bwt.runs.begin() + m64.run_index;
+      auto run = _bwt.runs.begin() + m64.run_index;
       auto run_first = std::accumulate(m64.counts.begin(),m64.counts.end(),0);
       while(true) {
 				auto run_len = run->length();
@@ -125,20 +124,20 @@ namespace bwt {
   ////////////////////////////////////////////////
 
   template <size_t AlphabetSize>
-  fm_index<AlphabetSize>::fm_index(const rle_string& bwt): bwt(bwt) {
+  fm_index<AlphabetSize>::fm_index(const rle_string& bwt): _bwt(bwt) {
     _marks64.reserve((bwt.size()>>shift64) + 1);
     _marks16.reserve((bwt.size()>>shift16) + 1);
     
-    std::fill(C.begin(),C.end(),0);
+    std::fill(_C.begin(),_C.end(),0);
     uint64_t run_index=0;
     uint64_t run_pos=0;
     for(auto run:bwt.runs) {
-      if (run_pos >= _marks64.size()<<shift64) _marks64.push_back(mark64_t(run_index,C));
+      if (run_pos >= _marks64.size()<<shift64) _marks64.push_back(mark64_t(run_index,C()));
       if (run_pos >= _marks16.size()<<shift16) {
 				_marks16.push_back(mark16_t(run_index - _marks64.back().run_index));
-				std::transform(C.begin(),C.end(),_marks64.back().counts.begin(),_marks16.back().counts.begin(),std::minus<uint64_t>());
+				std::transform(_C.begin(),_C.end(),_marks64.back().counts.begin(),_marks16.back().counts.begin(),std::minus<uint64_t>());
       }
-      C[run.value()] += run.length();
+      _C[run.value()] += run.length();
       run_pos += run.length();
       ++run_index;
     }
@@ -146,7 +145,7 @@ namespace bwt {
     // C[c] is the count symbol c in bwt string
     // transform it into the count of lexicography smaller symbols [0..c)
     uint64_t s = 0;
-    for(auto& i:C) {
+    for(auto& i:_C) {
       auto v = i;
       i = s;
       s += v;
@@ -157,7 +156,7 @@ namespace bwt {
 
   template <size_t AlphabetSize>
   void fm_index<AlphabetSize>::print_debug_info(std::ostream& os) const {
-  	bwt.print_debug_info(os);
+  	_bwt.print_debug_info(os);
     os << "#marks64:" << _marks64.size() << " (" << (double) _marks64.size() * sizeof(mark64_t)/1024/1024 << "Mo)" << std::endl;
     os << "#marks16:" << _marks16.size() << " (" << (double) _marks16.size() * sizeof(mark16_t)/1024/1024 << "Mo)" << std::endl;
   }

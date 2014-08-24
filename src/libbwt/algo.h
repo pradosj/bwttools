@@ -10,9 +10,9 @@ namespace bwt {
      */
     template<size_t sz>
     inline void init_char_range(const fm_index<sz>& fm, typename fm_index<sz>::alpha_count64& low, typename fm_index<sz>::alpha_count64& high) {				
-      low = fm.C;
-      std::copy(fm.C.begin()+1,fm.C.end(),high.begin());
-      high.back() = fm.bwt.size();
+      low = fm.C();
+      std::copy(low.begin()+1,low.end(),high.begin());
+      high.back() = fm.bwt().size();
     }
 	
     /*! \brief 1-character prefix extension of the interval [first,last) corresponding to string "S"
@@ -25,7 +25,7 @@ namespace bwt {
 				init_char_range(fm,low,high);
       } else {
 				//NOTE: computation of occ(.,last) might be faster using occ(.,first)
-				low = high = fm.C;
+				low = high = fm.C();
 				if (first>0) std::transform(low.begin(),low.end(),fm.occ(first-1).begin(),low.begin(),std::plus<uint64_t>());
 				std::transform(high.begin(),high.end(),fm.occ(last-1).begin(),high.begin(),std::plus<uint64_t>());
       }	
