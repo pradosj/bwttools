@@ -12,11 +12,13 @@
 
 
 
+//
+// Define alphabet
+//
 typedef std::string dna_string;
 const dna_string alphabet("$ACGT");
-auto encode = [&](char c)->uint8_t{return alphabet.find(c);};
-auto decode = [&](uint8_t c)->char{return alphabet[c];};
-
+inline uint8_t encode(char c) {return alphabet.find(c);}
+inline char decode(uint8_t c) {return alphabet[c];}
 typedef bwt::fm_index<5> dna_index;
 typedef std::vector< std::unique_ptr<dna_index> > dna_indices;
 
@@ -27,7 +29,6 @@ typedef std::vector< std::unique_ptr<dna_index> > dna_indices;
 //
 struct args_t {
     std::vector<std::string> bwtFiles;
-    int sampleRate = 128;
     int kmerLength = 27;
 };
 
@@ -39,13 +40,10 @@ args_t parseKmerCountOptions(int argc, char* argv[]) {
 		"\n"
 		"      --help                           display this help and exit\n"
 		"      --version                        display program version\n"
-		"      -k, --kmer-size=N                The length of the kmer to use. (default: 27)\n"
-		"      -d, --sample-rate=N              use occurrence array sample rate of N in the FM-index. Higher values use significantly\n"
-		"                                       less memory at the cost of higher runtime. This value must be a power of 2 (default: 128)\n";
+		"      -k, --kmer-size=N                The length of the kmer to use. (default: 27)\n";
 
 		enum { OPT_HELP = 1 };
 		static const struct option longopts[] = {
-		    { "sample-rate",           required_argument, NULL, 'd' },
 		    { "kmer-size",             required_argument, NULL, 'k' },
 		    { "help",                  no_argument,       NULL, OPT_HELP },
 		    { NULL, 0, NULL, 0 }
@@ -56,7 +54,6 @@ args_t parseKmerCountOptions(int argc, char* argv[]) {
     for (char c; (c = getopt_long(argc, argv, "d:k:x:", longopts, NULL)) != -1;) {
         std::istringstream arg(optarg != NULL ? optarg : "");
         switch (c) {
-            case 'd': arg >> args.sampleRate; break;
             case 'k': arg >> args.kmerLength; break;
             case OPT_HELP:
                 std::cout << usage_message;
