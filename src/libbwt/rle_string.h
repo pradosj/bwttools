@@ -10,13 +10,13 @@ namespace bwt {
 	 *  \brief a unit of the rle_string 
 	 */
 	struct run_t {
-	  uint8_t _data;
-	  run_t():_data(0) {}
-	  run_t(uint8_t val):_data((val<<5) | 1) {}
-	  inline uint8_t length() const {return _data & 0x1F;}
-	  inline uint8_t value() const {return (_data & 0xE0)>>5;}
-	  inline bool full() const {return length()>=31;}
-	  inline run_t& operator++() {++_data;return *this;}
+		uint8_t _data;
+		run_t():_data(0) {}
+		run_t(uint8_t val):_data((val<<5) | 1) {}
+		inline uint8_t length() const {return _data & 0x1F;}
+		inline uint8_t value() const {return (_data & 0xE0)>>5;}
+		inline bool full() const {return length()>=31;}
+		inline run_t& operator++() {++_data;return *this;}
 	};
 
 
