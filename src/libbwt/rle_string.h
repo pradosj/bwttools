@@ -24,14 +24,14 @@ namespace bwt {
 	/*! \class rle_string
 	 *  \brief run length encoded string
 	 */
-	struct rle_string {        
-    //! \brief construct an object reading the bwt from the input range
+	struct rle_string {
+		//! \brief construct an empty string
+		rle_string() {}
+		
+    //! \brief construct an object reading the string from the input range
     template<typename InputIterator>
     rle_string(InputIterator first,InputIterator last);
-    
-    //! \brief construct an object by reading the rle-encoded bwt string from a binary stream
-    rle_string(std::istream& is) {_size = read_runs(is);}
-    
+        
     //! \return total number of symbol in the bwt string
     inline uint64_t size() const {return _size;}
 
@@ -65,7 +65,7 @@ namespace bwt {
   	std::vector<run_t> _runs;
   	
     //! \brief read rle encoded runs from an input stream
-    size_t read_runs(std::istream& is);
+    friend rle_string read_rle_bwt(const std::string& filename);
 	};
 	
 	
@@ -80,7 +80,9 @@ namespace bwt {
     for(;first != last;first++) push_back(*first);
   }
 	
-  size_t rle_string::read_runs(std::istream& is) {
+  rle_string read_rle_bwt(const std::string& filename) {
+  	std::ifstream is(filename,std::ios::binary);
+  	
     enum {BWF_NOFMI = 0,BWF_HASFMI} flag;
     uint16_t magic_number;
     size_t num_strings, num_symbols, num_runs;
@@ -93,10 +95,13 @@ namespace bwt {
     std::cerr << "#symbols:" << num_symbols << std::endl;
     std::cerr << "#strings:" << num_strings << std::endl;
     std::cerr << "#run:" << num_runs << std::endl;
-    _runs.clear();
-    _runs.resize(num_runs);
-    is.read(reinterpret_cast<char*>(&_runs[0]), num_runs*sizeof(_runs[0]));
-    return num_symbols;
+    
+    rle_string bwt;
+    bwt._runs.resize(num_runs);
+    is.read(reinterpret_cast<char*>(&bwt._runs[0]), num_runs*sizeof(bwt._runs[0]));
+    bwt._size = num_symbols;
+    
+    return bwt;
   }
   
 };

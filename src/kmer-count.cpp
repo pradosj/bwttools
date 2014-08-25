@@ -12,7 +12,6 @@
 #include <mutex>
 #include <condition_variable>
 
-
 #include <fm_index.h>
 #include <algo.h>
 
@@ -26,7 +25,7 @@ const dna_string alphabet("$ACGT");
 inline uint8_t encode(char c) {return alphabet.find(c);}
 inline char decode(uint8_t c) {return alphabet[c];}
 typedef bwt::fm_index<5> dna_index;
-typedef std::vector< std::unique_ptr<dna_index> > dna_indices;
+typedef std::vector<dna_index> dna_indices;
 
 
 
@@ -34,56 +33,56 @@ typedef std::vector< std::unique_ptr<dna_index> > dna_indices;
 // Getopt
 //
 struct args_t {
-    std::vector<std::string> bwtFiles;
-    int kmerLength = 27;
+  std::vector<std::string> bwtFiles;
+  int kmerLength = 27;
 };
 
 args_t parseKmerCountOptions(int argc, char* argv[]) {
-		static const char* usage_message =
-		"Usage: kmer-count [OPTION] src.bwt [test1.bwt] [test2.bwt]\n"
-		"Generate a table of the k-mers in src.bwt, and optionaly count the number of time they appears in testX.bwt.\n"
-		"Output on stdout the canonical kmers and their counts on forward and reverse strand\n"
-		"\n"
-		"      --help                           display this help and exit\n"
-		"      --version                        display program version\n"
-		"      -k, --kmer-size=N                The length of the kmer to use. (default: 27)\n";
+	static const char* usage_message =
+	"Usage: kmer-count [OPTION] src.bwt [test1.bwt] [test2.bwt]\n"
+	"Generate a table of the k-mers in src.bwt, and optionaly count the number of time they appears in testX.bwt.\n"
+	"Output on stdout the canonical kmers and their counts on forward and reverse strand\n"
+	"\n"
+	"      --help                           display this help and exit\n"
+	"      --version                        display program version\n"
+	"      -k, --kmer-size=N                The length of the kmer to use. (default: 27)\n";
 
-		enum { OPT_HELP = 1 };
-		static const struct option longopts[] = {
-		    { "kmer-size",             required_argument, NULL, 'k' },
-		    { "help",                  no_argument,       NULL, OPT_HELP },
-		    { NULL, 0, NULL, 0 }
-		};
-		args_t args;
-		
+	enum { OPT_HELP = 1 };
+	static const struct option longopts[] = {
+    { "kmer-size",             required_argument, NULL, 'k' },
+    { "help",                  no_argument,       NULL, OPT_HELP },
+    { NULL, 0, NULL, 0 }
+	};
+	args_t args;
+	
 
-    for (char c; (c = getopt_long(argc, argv, "d:k:x:", longopts, NULL)) != -1;) {
-        std::istringstream arg(optarg != NULL ? optarg : "");
-        switch (c) {
-            case 'k': arg >> args.kmerLength; break;
-            case OPT_HELP:
-                std::cout << usage_message;
-                exit(EXIT_SUCCESS);
-        }
+  for (char c; (c = getopt_long(argc, argv, "d:k:x:", longopts, NULL)) != -1;) {
+    std::istringstream arg(optarg != NULL ? optarg : "");
+    switch (c) {
+      case 'k': arg >> args.kmerLength; break;
+      case OPT_HELP:
+        std::cout << usage_message;
+        exit(EXIT_SUCCESS);
     }
+  }
 
-    if(args.kmerLength <= 0 || args.kmerLength % 2 == 0) {
-        std::cerr << "kmer-count: invalid kmer length: " << args.kmerLength << ", must be greater than zero and odd\n";
-        std::cout << "\n" << usage_message;
-        exit(EXIT_FAILURE);
-    }
+  if(args.kmerLength <= 0 || args.kmerLength % 2 == 0) {
+    std::cerr << "kmer-count: invalid kmer length: " << args.kmerLength << ", must be greater than zero and odd\n";
+    std::cout << "\n" << usage_message;
+    exit(EXIT_FAILURE);
+  }
 
-    for(;optind<argc;++optind) {
-        args.bwtFiles.push_back(argv[optind]);
-    }
+  for(;optind<argc;++optind) {
+    args.bwtFiles.push_back(argv[optind]);
+  }
 
-    if (args.bwtFiles.size() < 1) {
-        std::cerr << "kmer-count: missing arguments\n";
-        std::cout << "\n" << usage_message;
-        exit(EXIT_FAILURE);
-    }
-    
-    return args;
+  if (args.bwtFiles.size() < 1) {
+    std::cerr << "kmer-count: missing arguments\n";
+    std::cout << "\n" << usage_message;
+    exit(EXIT_FAILURE);
+  }
+  
+  return args;
 }
 
 
@@ -94,9 +93,9 @@ args_t parseKmerCountOptions(int argc, char* argv[]) {
 
 // Stack structure used in the depth first search of kmers
 struct stack_elt_t {
-    dna_string path;
-    dna_index::alpha_count64 lb;
-    dna_index::alpha_count64 ub;
+  dna_string path;
+  dna_index::alpha_count64 lb;
+  dna_index::alpha_count64 ub;
 };
 
 
@@ -128,22 +127,21 @@ void traverse_kmer(unsigned int k) {
 		}
     
     for(size_t i = 1; i < alphabet.size(); ++i) {
-    		if (top.lb[i]<top.ub[i]) {
-            stack_elt_t e = top;
-            e.path.push_back(i);
-		        if (e.path.length()>=k) {
-		            std::reverse(e.path.begin(),e.path.end());
-		            std::transform(e.path.begin(),e.path.end(),e.path.begin(),decode);
-		            
-		            std::unique_lock<std::mutex> lck(io_mtx);
-		            std::cout << e.path << '\t' << (e.ub[i]-e.lb[i]) << std::endl;
-		        } else {
-                bwt::extend_lhs(*bwts[0],e.lb,e.ub,i);
-                std::unique_lock<std::mutex> lck(mtx);
-                stack.push(e);
-                cv.notify_one();
-		        }
-    		}
+  		if (top.lb[i]<top.ub[i]) {
+        stack_elt_t e = top;
+        e.path.push_back(i);
+        if (e.path.length()>=k) {
+          std::reverse(e.path.begin(),e.path.end());
+          std::transform(e.path.begin(),e.path.end(),e.path.begin(),decode);
+          std::unique_lock<std::mutex> lck(io_mtx);
+          std::cout << e.path << '\t' << (e.ub[i]-e.lb[i]) << std::endl;
+        } else {
+          bwt::extend_lhs(bwts[0],e.lb,e.ub,i);
+          std::unique_lock<std::mutex> lck(mtx);
+          stack.push(e);
+          cv.notify_one();
+        }
+  		}
     }
 	}
 	cv.notify_all();
@@ -161,14 +159,13 @@ int main(int argc, char* argv[]) {
     args_t args = parseKmerCountOptions(argc,argv);
 		
 		// load bwt from files
-    for(auto filename:args.bwtFiles) {
-    		std::ifstream f(filename.c_str(),std::ios::binary);
-        bwts.push_back(std::unique_ptr<dna_index>(new dna_index(f)));
+    for(const auto& filename:args.bwtFiles) {
+      bwts.push_back(dna_index(bwt::read_rle_bwt(filename)));
     }
     
     // intialize kmer traversal
 		stack.push(stack_elt_t());
-		bwt::alpha_range(*bwts[0],stack.top().lb,stack.top().ub);
+		bwt::alpha_range(bwts[0],stack.top().lb,stack.top().ub);
 		
 		// launch the threads and wait for the end
     std::vector<std::thread> threads;
