@@ -56,6 +56,7 @@ namespace bwt {
 	  void print_debug_info(std::ostream& os) const {
 	    os << "size:" << size() << std::endl;
 	    os << "#run:" << _runs.size() << std::endl;
+	    os << "#full run:" << std::count_if(_runs.begin(),_runs.end(),[](const run_t& r){return r.full();}) << std::endl;
 	    os << "avg run size:" << (double) size() / _runs.size() << std::endl;
 	  }
 

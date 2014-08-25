@@ -102,7 +102,7 @@ struct stack_elt_t {
 void traverse_kmer(dna_indices& bwts, unsigned int k) {
     std::stack< stack_elt_t > stack;
 		stack.push(stack_elt_t());
-		bwt::init_char_range(*bwts[0],stack.top().lb,stack.top().ub);
+		bwt::alpha_range(*bwts[0],stack.top().lb,stack.top().ub);
 
     // Perform the kmer search
     while(!stack.empty()) {
