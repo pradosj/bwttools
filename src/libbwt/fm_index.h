@@ -156,7 +156,7 @@ namespace bwt {
 
   template <size_t AlphabetSize>
   void fm_index<AlphabetSize>::print_debug_info(std::ostream& os) const {
-  	_bwt.print_debug_info(os);
+		_bwt.print_debug_info(os);
     os << "#marks64:" << _marks64.size() << " (" << (double) _marks64.size() * sizeof(mark64_t)/1024/1024 << "Mo)" << std::endl;
     os << "#marks16:" << _marks16.size() << " (" << (double) _marks16.size() * sizeof(mark16_t)/1024/1024 << "Mo)" << std::endl;
   }

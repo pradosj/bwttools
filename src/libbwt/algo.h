@@ -4,7 +4,7 @@
 #include "fm_index.h"
 
 namespace bwt {
-
+		
 		/*! \brief initialize the intervals [low[c],high[c]) with the 1-character string "c"
 		 *         for each character of the alphabet
      */
@@ -49,13 +49,13 @@ namespace bwt {
       if (first>=last) {
 				init_char_range(fm,low,high);
       } else {
-      	// compute diff = fm.occ(last-1) - fm.occ(first-1)
-      	high = fm.occ(last-1);
-      	if (first>0) std::transform(high.begin(),high.end(),fm.occ(first-1).begin(),high.begin(),std::minus<uint64_t>());
-      	
-      	// update low and high using diff
+				// compute diff = fm.occ(last-1) - fm.occ(first-1)
+				high = fm.occ(last-1);
+				if (first>0) std::transform(high.begin(),high.end(),fm.occ(first-1).begin(),high.begin(),std::minus<uint64_t>());
+				
+				// update low and high using diff
 				uint64_t s = 0;
-      	auto i = low.begin();
+				auto i = low.begin();
 				for(auto& v:high) {
 					*i += s;
 					s += v;
