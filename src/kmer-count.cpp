@@ -24,6 +24,8 @@ typedef std::string dna_string;
 const dna_string alphabet("$ACGT");
 inline uint8_t encode(char c) {return alphabet.find(c);}
 inline char decode(uint8_t c) {return alphabet[c];}
+inline uint8_t complement(uint8_t c) {return 5-c;}
+
 typedef bwt::fm_index<5> dna_index;
 typedef std::vector<dna_index> dna_indices;
 
@@ -131,10 +133,26 @@ void traverse_kmer(unsigned int k) {
         stack_elt_t e = top;
         e.path.push_back(i);
         if (e.path.length()>=k) {
-          std::reverse(e.path.begin(),e.path.end());
-          std::transform(e.path.begin(),e.path.end(),e.path.begin(),decode);
-          std::unique_lock<std::mutex> lck(io_mtx);
-          std::cout << e.path << '\t' << (e.ub[i]-e.lb[i]) << std::endl;
+					std::string fwd(e.path);
+					std::reverse(fwd.begin(),fwd.end());
+					std::string rev(e.path);
+					std::transform(rev.begin(),rev.end(),rev.begin(),complement);
+					
+					dna_index::alpha_count64 lb,ub;
+					alpha_range(bwts[0],lb,ub);
+					for(size_t i=rev.size()-1;i>1<;--i) bwt::extend_lhs(bwts[0],lb,ub,rev[i]);
+					uint64_t rev_count = ub[rev.front()]-lb[rev.front()];
+					uint64_t fwd_count = e.ub[i]-e.lb[i];
+					
+					std::transform(fwd.begin(),fwd.end(),fwd.begin(),decode);
+					std::transform(rev.begin(),rev.end(),rev.begin(),decode);
+          if (fwd<=rev) {
+						std::unique_lock<std::mutex> lck(io_mtx);
+						std::cout << fwd << '\t' << fwd_count << '\t' << rev_count << std::endl;
+          } else {
+						std::unique_lock<std::mutex> lck(io_mtx);
+						std::cout << rev << '\t' << rev_count << '\t' << fwd_count << std::endl;          	
+          }
         } else {
           bwt::extend_lhs(bwts[0],e.lb,e.ub,i);
           std::unique_lock<std::mutex> lck(mtx);
