@@ -6,6 +6,12 @@
 #include <memory>
 #include <getopt.h>
 #include <cinttypes>
+#include <cinttypes>
+
+#include <thread>
+#include <mutex>
+#include <condition_variable>
+
 
 #include <fm_index.h>
 #include <algo.h>
@@ -95,34 +101,53 @@ struct stack_elt_t {
 
 
 
+dna_indices bwts;
+std::stack< stack_elt_t > stack;
+std::mutex mtx,io_mtx;
+std::condition_variable cv;
+unsigned int num_working_thread = 0;
+
+
 // extract all canonical kmers of a bwt by performing a backward depth-first-search
-void traverse_kmer(dna_indices& bwts, unsigned int k) {
-    std::stack< stack_elt_t > stack;
-		stack.push(stack_elt_t());
-		bwt::alpha_range(*bwts[0],stack.top().lb,stack.top().ub);
-
-    // Perform the kmer search
-    while(!stack.empty()) {
-        // pop an element from the stack, and update the string path accordingly
-        stack_elt_t top = stack.top();
-        stack.pop();
-        for(size_t i = 1; i < alphabet.size(); ++i) {
-        		if (top.lb[i]<top.ub[i]) {
-                stack_elt_t e = top;
-                e.path.push_back(i);
-				        if (e.path.length()>=k) {
-				            std::reverse(e.path.begin(),e.path.end());
-				            std::transform(e.path.begin(),e.path.end(),e.path.begin(),decode);
-				            std::cout << e.path << '\t' << (e.ub[i]-e.lb[i]) << std::endl;
-				        } else {
-		                bwt::extend_lhs(*bwts[0],e.lb,e.ub,i);
-		                stack.push(e);
-				        }
-        		}
-        }
+void traverse_kmer(unsigned int k) {
+	{
+		std::unique_lock<std::mutex> lck(mtx);
+		++num_working_thread;
+	}
+	
+	while(true) {
+		stack_elt_t top;
+		{// pop one element from the stack
+	    std::unique_lock<std::mutex> lck(mtx);
+	    --num_working_thread;
+	    while (stack.empty() && num_working_thread>0) cv.wait(lck);
+	    if (stack.empty()) break;
+	    ++num_working_thread;
+	    top = stack.top();
+	    stack.pop();
+		}
+    
+    for(size_t i = 1; i < alphabet.size(); ++i) {
+    		if (top.lb[i]<top.ub[i]) {
+            stack_elt_t e = top;
+            e.path.push_back(i);
+		        if (e.path.length()>=k) {
+		            std::reverse(e.path.begin(),e.path.end());
+		            std::transform(e.path.begin(),e.path.end(),e.path.begin(),decode);
+		            
+		            std::unique_lock<std::mutex> lck(io_mtx);
+		            std::cout << e.path << '\t' << (e.ub[i]-e.lb[i]) << std::endl;
+		        } else {
+                bwt::extend_lhs(*bwts[0],e.lb,e.ub,i);
+                std::unique_lock<std::mutex> lck(mtx);
+                stack.push(e);
+                cv.notify_one();
+		        }
+    		}
     }
+	}
+	cv.notify_all();
 }
-
 
 
 
@@ -136,14 +161,20 @@ int main(int argc, char* argv[]) {
     args_t args = parseKmerCountOptions(argc,argv);
 		
 		// load bwt from files
-    dna_indices bwts;
     for(auto filename:args.bwtFiles) {
     		std::ifstream f(filename.c_str(),std::ios::binary);
         bwts.push_back(std::unique_ptr<dna_index>(new dna_index(f)));
     }
     
-    // traverse the kmers
-    traverse_kmer(bwts,args.kmerLength);
+    // intialize kmer traversal
+		stack.push(stack_elt_t());
+		bwt::alpha_range(*bwts[0],stack.top().lb,stack.top().ub);
+		
+		// launch the threads and wait for the end
+    std::vector<std::thread> threads;
+    for(auto i:{0,1,2,3}) threads.push_back(std::thread(traverse_kmer,args.kmerLength));
+    for(auto& t:threads) t.join();
+    
 	} catch (std::exception e) {
 			std::cerr << e.what() << std::endl;
 	};

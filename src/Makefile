@@ -1,5 +1,5 @@
 
-export CXXFLAGS += -std=c++11
+export CXXFLAGS += -std=c++11 -O3
 #export CXXFLAGS += -DNDEBUG
 
 all:test kmer-count
