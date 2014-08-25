@@ -10,11 +10,7 @@ test:test.cpp
 kmer-count:kmer-count.cpp
 	$(CXX) $(CXXFLAGS) -o $@ -Ilibbwt $^
 
-libbwt/libbwt.a:
-	$(MAKE) -C $(@D)
-
 clean:
-	$(MAKE) -C libbwt clean
 	rm -f test kmer-count
 
 
