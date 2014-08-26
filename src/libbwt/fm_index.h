@@ -16,6 +16,7 @@
 namespace bwt {
 
 
+
   /*! \class fm_index
    *  \brief FM index with an internal run-length encoded Burrows Wheeler Transform string
    *         To speed up random access, the class store one largeMark every 65536 indices, and one smallMark every 512
@@ -48,6 +49,13 @@ namespace bwt {
     
     //! \brief number of occurence of symbols [0..c) in bwt string.
     const alpha_count64& C() const {return _C;}
+    
+    //! \return last to first mapping at position i for all characters of the alphabet
+    inline alpha_count64 lf(const uint64_t i) const {
+    	auto n(occ(i));
+    	std::transform(n.begin(),n.end(),C().begin(),n.begin(),std::plus<uint64_t>());
+    	return n;
+  	}
     
     //! \return bwt[i], the ith character of bwt string
     inline uint8_t operator[](const uint64_t i) const {return _bwt.runs()[mark_at(i).run_index].value();}
