@@ -133,23 +133,28 @@ void traverse_kmer(unsigned int k) {
         stack_elt_t e = top;
         e.path.push_back(i);
         if (e.path.length()>=k) {
+        	// extract forward an reverse sequence from the path
 					std::string fwd(e.path);
 					std::reverse(fwd.begin(),fwd.end());
 					std::string rev(e.path);
 					std::transform(rev.begin(),rev.end(),rev.begin(),complement);
 					
+					// count number of occurence of the reverse complement
 					dna_index::alpha_count64 lb,ub;
 					alpha_range(bwts[0],lb,ub);
 					for(size_t i=rev.size()-1;i>1;--i) bwt::extend_lhs(bwts[0],lb,ub,rev[i]);
 					uint64_t rev_count = ub[rev.front()]>lb[rev.front()]?ub[rev.front()]-lb[rev.front()]:0;
+					
+					// 
 					uint64_t fwd_count = e.ub[i]>e.lb[i]?e.ub[i]-e.lb[i]:0;
 					
-					std::transform(fwd.begin(),fwd.end(),fwd.begin(),decode);
-					std::transform(rev.begin(),rev.end(),rev.begin(),decode);
+					// output the counts 
           if (fwd<=rev) {
+          	std::transform(fwd.begin(),fwd.end(),fwd.begin(),decode);
 						std::unique_lock<std::mutex> lck(io_mtx);
 						std::cout << fwd << '\t' << fwd_count << '\t' << rev_count << std::endl;
           } else {
+          	std::transform(rev.begin(),rev.end(),rev.begin(),decode);
 						std::unique_lock<std::mutex> lck(io_mtx);
 						std::cout << rev << '\t' << rev_count << '\t' << fwd_count << std::endl;          	
           }
