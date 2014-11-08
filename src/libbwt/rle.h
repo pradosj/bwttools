@@ -50,7 +50,7 @@ namespace bwt {
       } else {
 				_runs.push_back(v);
       }
-      _size++;
+      ++_size;
     }
 
 	  void print_debug_info(std::ostream& os) const {
@@ -61,13 +61,26 @@ namespace bwt {
 	  }
 
   private:
-  	uint64_t _size = 0;
   	std::vector<run_t> _runs;
+  	std::vector<uint16_t> _idx16;
+  	std::vector<size_t> _idx;
   	
     //! \brief read rle encoded runs from an input stream
     friend rle_string read_rle_bwt(const std::string& filename);
 	};
 	
+	
+	template<typename T> struct rle_iterator {
+		size_t length() const {return 1;}
+		T opertor*() const {return ;}
+		rle_iterator& operator++() {return *this;}
+	};
+
+
+	template<> void make_rle_iterator(bwt,size_t i) {
+	}
+
+
 	
   ////////////////////////////////////////////////
   //
