@@ -5,7 +5,8 @@ using namespace Rcpp;
 // [[Rcpp::plugins(cpp11)]]
 
 typedef struct {
-  uint64_t u, v;
+  uint64_t u,v;
+	uint8_t w;
 } pair64_t;
 
 
@@ -39,9 +40,6 @@ uint8_t *bcr_lite(long Blen, uint8_t *B, long Tlen, const uint8_t *T)
   P = (const uint8_t**) realloc(P, (n + 1) * sizeof(void*));
   P[n] = q;
 
-Rprintf("%d\n",n);
-for(auto x=P;x<P+n;++x) Rprintf("%p\n",*x);
-
   // initialize
   for (p = B, end = B + Blen, i = 0; p < end; ++p) i += (*p == 0); // count # of sentinels
   a = (pair64_t*) malloc(sizeof(pair64_t) * n);
@@ -50,21 +48,15 @@ for(auto x=P;x<P+n;++x) Rprintf("%p\n",*x);
   memmove(B + Tlen, B, Blen); // finished BWT is always placed at the end of $B
   B = B0 = B + Tlen;
   
-  for(auto x:std::vector<pair64_t>(a,a+n)) Rprintf("%d,%d\n",x.u,x.v);
-  
-  
   // core loop
   for (i = 0, n0 = n; n0; ++i) {
     long l, pre, ac[256], mc[256], mc2[256];
     pair64_t *b[256], *aa;
     for (c = 0; c != 256; ++c) mc[c] = mc2[c] = 0;
     end = B0 + Blen; Blen += n0; B -= n0;
-for(auto x:std::vector<pair64_t>(a,a+n0)) Rprintf("(%d,%d),",x.u,x.v);Rprintf("\n");
     for (n = k = 0, p = B0, q = B, pre = 0; k < n0; ++k) {
       pair64_t *u = &a[k];
       c = P[(u->v>>8) + 1] - 2 - i >= P[u->v>>8]? *(P[(u->v>>8) + 1] - 2 - i) : 0; // symbol to insert
-      Rprintf("n=%d,n0=%d,c=%d,u=(%d,%d),i=%d\n",n,n0,c,u->u,u->v,i);
-      Rprintf("  reads[%d]=%d,reads[%d]=%d\n",(u->v>>8)+1,P[(u->v>>8)+1],u->v>>8,P[u->v>>8]);
       u->v = (u->v&~0xffULL) | c;
       for (l = 0; l != u->u - pre; ++l) // copy ($u->u - $pre - 1) symbols from B0 to B
         ++mc[*p], *q++ = *p++; // $mc: marginal counts of all processed symbols
@@ -72,7 +64,9 @@ for(auto x:std::vector<pair64_t>(a,a+n0)) Rprintf("(%d,%d),",x.u,x.v);Rprintf("\
       pre = u->u + 1; u->u = mc[c]++;
       if (c) a[n++] = a[k], ++mc2[c]; // $mc2: marginal counts of the current column
     }
-    Rprintf("xxx\n");
+    
+    for(auto x:std::vector<pair64_t>(a,a+n)) Rprintf("(%d,%d),",x.u,x.v);Rprintf("\n");
+    
     while (p < end) ++mc[*p], *q++ = *p++; // copy the rest of $B0 to $B
     for (c = 1, ac[0] = 0; c != 256; ++c) ac[c] = ac[c-1] + mc[c-1]; // accumulative count
     for (k = 0; k < n; ++k) a[k].u += ac[a[k].v&0xff] + n; // compute positions for the next round
@@ -127,34 +121,33 @@ uint8_t *bcr_lite2(long Blen, uint8_t *B, long Tlen, const uint8_t *T) {
     B -= a.size();
 
     long pre = 0;
-    uint8_t *p = B0;uint8_t *q = B;
-    
-for(auto x:a) Rprintf("(%d,%d),",x.u,x.v);Rprintf("\n");
-
+    uint8_t *p = B0;
+    uint8_t *q = B;
     size_t n = 0;
     for (auto &u:a) {
-      int c = reads[(u.v>>8)+1]-2-i >= reads[u.v>>8] ? *(reads[(u.v>>8)+1]-2-i) : 0; // symbol to insert
-      u.v = (u.v&~0xffULL) | c;
+    	u.w = reads[u.v+1]-2-i >= reads[u.v] ? *(reads[u.v+1]-2-i) : 0; // symbol to insert
       for (long l = 0; l != u.u - pre; ++l) // copy ($u->u - $pre - 1) symbols from B0 to B
         ++mc[*p], *q++ = *p++; // $mc: marginal counts of all processed symbols
-      *q++ = c;
-      pre = u.u + 1; u.u = mc[c]++;
-      if (c) a[n++] = u, ++mc2[c]; // $mc2: marginal counts of the current column
+      *q++ = u.w;
+      pre = u.u + 1; u.u = mc[u.w]++;
+      if (u.w) a[n++] = u, ++mc2[u.w]; // $mc2: marginal counts of the current column
     }
+    a.resize(n);
+for(auto x:a) Rprintf("(%d,%d,%d),",x.u,x.v,x.w);Rprintf("\n");
+return (uint8_t*) "ici";
+    
     const uint8_t *end = B0 + Blen;
     while (p < end) ++mc[*p], *q++ = *p++; // copy the rest of $B0 to $B
-    a.resize(n);
 
-    // accumulative count
     std::vector<pair64_t> aa(a.size());
     std::array<long,256> ac;ac[0] = 0;
     for(auto c=1;c!=ac.size();++c) ac[c] = ac[c-1] + mc[c-1]; // accumulative count
-    for(auto &x:a) x.u = ac[x.v&0xff] + a.size(); // compute positions for the next round
+    for(auto &x:a) x.u = ac[x.w] + a.size(); // compute positions for the next round
 
     // stable counting sort ($a[k].v&0xff); also possible with an in-place non-stable radix sort, which is slower
     std::array<long,256> b;b[0] = 0;
     for(auto c=1;c!=b.size();++c) b[c] = b[c-1] + mc2[c-1]; // accumulative count
-    for(auto x:a) aa[b[x.v&0xff]++] = x; // this works because $a is already partially sorted
+    for(auto x:a) aa[b[x.w]++] = x; // this works because $a is already partially sorted
     a = std::move(aa); // $aa now becomes $a
 
         
