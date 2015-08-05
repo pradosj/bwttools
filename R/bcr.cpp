@@ -11,9 +11,9 @@ typedef struct {
 
 
 void bcr(const uint8_t* text_begin, const uint8_t* text_end,uint8_t* bwt_begin) {
-	long i, k, n, max, n0;
+	long i, k, n, n0;
 	uint8_t *p, *q, *B0;
-	const uint8_t *end, **P = 0;
+	const uint8_t *end = 0;
 	pair64_t *a;
 	int c;
 	long Tlen = std::distance(text_begin,text_end);
@@ -21,16 +21,15 @@ void bcr(const uint8_t* text_begin, const uint8_t* text_end,uint8_t* bwt_begin) 
 	
 	// split $T into short strings at sentinels
 	if (text_begin == text_end) return;
-	for (p = q = (uint8_t*) text_begin, end = text_end, n = max = 0; p != end; ++p) {
-		if (*p) continue;
-		if (n == max) {
-			max = max? max<<1 : 256;
-			P = (const uint8_t**) realloc(P, max * sizeof(void*));
-		}
-		P[n++] = q, q = p + 1;
+	std::vector<const uint8_t*> P;
+	while(text_begin != text_end) {
+		auto line_end = std::find(text_begin,text_end,0);
+		if (line_end==text_end) break; // the text is not ending with eol, the last line is skipped
+		P.push_back(text_begin);
+		text_begin = line_end + 1;
 	}
-	P = (const uint8_t**) realloc(P, (n + 1) * sizeof(void*));
-	P[n] = q;
+	P.push_back(text_begin);
+	n = P.size() - 1;
 	
 	// initialize
 	a = (pair64_t*) malloc(sizeof(pair64_t) * n);
@@ -53,9 +52,6 @@ void bcr(const uint8_t* text_begin, const uint8_t* text_end,uint8_t* bwt_begin) 
 			pre = u->u + 1; u->u = mc[c]++;
 			if (c) a[n++] = a[k], ++mc2[c]; // $mc2: marginal counts of the current column
 		}
-		
-		for(auto x:std::vector<pair64_t>(a,a+n)) Rprintf("(%d,%d),",x.u,x.v);Rprintf("\n");
-		
 		while (p < end) ++mc[*p], *q++ = *p++; // copy the rest of $B0 to $B
 		for (c = 1, ac[0] = 0; c != 256; ++c) ac[c] = ac[c-1] + mc[c-1]; // accumulative count
 		for (k = 0; k < n; ++k) a[k].u += ac[a[k].v&0xff] + n; // compute positions for the next round
@@ -66,7 +62,7 @@ void bcr(const uint8_t* text_begin, const uint8_t* text_end,uint8_t* bwt_begin) 
 		free(a); a = aa; // $aa now becomes $a
 		B0 = bwt_begin; n0 = n;
 	}
-	free(P); free(a);
+	free(a);
 }
 
 // [[Rcpp::export]]
