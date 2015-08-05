@@ -4,165 +4,84 @@
 using namespace Rcpp;
 // [[Rcpp::plugins(cpp11)]]
 
-typedef struct {
-  uint64_t u,v;
-	uint8_t w;
-} pair64_t;
+
+struct bcr_iterator_t {
+	const uint8_t* last;
+	uint64_t n;
+};
 
 
-/**
- * Append $T to existing BWT $B.
- *
- * @param Blen    length of the existing BWT
- * @param B       existing BWT; set to NULL if non-existing
- * @param Tlen    length of input string
- * @param T       input string; '\0' represents a sentinel
- *
- * @return  the new BWT string
- */
-uint8_t *bcr_lite(long Blen, uint8_t *B, long Tlen, const uint8_t *T)
-{
-  long i, k, n, max, n0;
-  uint8_t *p, *q, *B0;
-  const uint8_t *end, **P = 0;
-  pair64_t *a;
-  int c;
-  // split $T into short strings at sentinels
-  if (T == 0 || Tlen == 0) return B;
-  for (p = q = (uint8_t*)T, end = T + Tlen, n = max = 0; p != end; ++p) {
-    if (*p) continue;
-    if (n == max) {
-      max = max? max<<1 : 256;
-      P = (const uint8_t**) realloc(P, max * sizeof(void*));
-    }
-    P[n++] = q, q = p + 1;
+
+void bcr(const uint8_t* text_begin, const uint8_t* text_end,uint8_t* bwt_begin) {
+	
+  // search for lines in the text, and fill last_char[] with a pointer onto the last character of each line
+  std::vector<bcr_iterator_t> last_char;
+  while(text_begin != text_end) {
+  	auto line_end = std::find(text_begin,text_end,0);
+  	if (line_end==text_end) break; // the text is not ending with eol, the last line is skipped
+  	last_char.push_back({line_end-1,last_char.size()});
+  	text_begin = line_end + 1;
   }
-  P = (const uint8_t**) realloc(P, (n + 1) * sizeof(void*));
-  P[n] = q;
-
-  // initialize
-  for (p = B, end = B + Blen, i = 0; p < end; ++p) i += (*p == 0); // count # of sentinels
-  a = (pair64_t*) malloc(sizeof(pair64_t) * n);
-  for (k = 0; k < n; ++k) a[k].u = k + i, a[k].v = k<<8;
-  B = (uint8_t*) realloc(B, Blen + Tlen);
-  memmove(B + Tlen, B, Blen); // finished BWT is always placed at the end of $B
-  B = B0 = B + Tlen;
   
   // core loop
-  for (i = 0, n0 = n; n0; ++i) {
+  auto bwt_end = bwt_begin + std::distance(text_begin,text_end);
+  while(!last_char.empty()) {
+  	uint64_t pre = 0;
+  	bwt_begin = bwt_end - last_char.size();
+
+  	std::array<uint64_t,256> mc;mc.fill(0);
+    for (auto &x:last_char) {
+    	Rprintf("%d\n",x.n - pre);
+    	auto q = std::copy_n(bwt_end,x.n - pre,bwt_begin);
+    	std::for_each(bwt_begin,q,[&mc](uint8_t p) {++mc[p];});
+    	*q++ = *x.last;
+    	pre = x.n + 1;
+    	x.n = mc[*x.last]++;
+    	if (*x.last) {
+    		
+    		--x.last;
+    	}
+    }
+		break;
+/*    
     long l, pre, ac[256], mc[256], mc2[256];
-    pair64_t *b[256], *aa;
-    for (c = 0; c != 256; ++c) mc[c] = mc2[c] = 0;
-    end = B0 + Blen; Blen += n0; B -= n0;
-    for (n = k = 0, p = B0, q = B, pre = 0; k < n0; ++k) {
-      pair64_t *u = &a[k];
-      c = P[(u->v>>8) + 1] - 2 - i >= P[u->v>>8]? *(P[(u->v>>8) + 1] - 2 - i) : 0; // symbol to insert
-      u->v = (u->v&~0xffULL) | c;
-      for (l = 0; l != u->u - pre; ++l) // copy ($u->u - $pre - 1) symbols from B0 to B
-        ++mc[*p], *q++ = *p++; // $mc: marginal counts of all processed symbols
-      *q++ = c;
-      pre = u->u + 1; u->u = mc[c]++;
-      if (c) a[n++] = a[k], ++mc2[c]; // $mc2: marginal counts of the current column
-    }
-    
-    for(auto x:std::vector<pair64_t>(a,a+n)) Rprintf("(%d,%d),",x.u,x.v);Rprintf("\n");
-    
-    while (p < end) ++mc[*p], *q++ = *p++; // copy the rest of $B0 to $B
-    for (c = 1, ac[0] = 0; c != 256; ++c) ac[c] = ac[c-1] + mc[c-1]; // accumulative count
-    for (k = 0; k < n; ++k) a[k].u += ac[a[k].v&0xff] + n; // compute positions for the next round
-    // stable counting sort ($a[k].v&0xff); also possible with an in-place non-stable radix sort, which is slower
-    aa = (pair64_t *) malloc(sizeof(pair64_t) * n);
-    for (c = 1, b[0] = aa; c != 256; ++c) b[c] = b[c-1] + mc2[c-1];
-    for (k = 0; k < n; ++k) *b[a[k].v&0xff]++ = a[k]; // this works because $a is already partially sorted
-    free(a); a = aa; // $aa now becomes $a
-    B0 = B; n0 = n;
-  }
-  free(P); free(a);
-  return B;
-}
-
-
-/**
- * Append $T to existing BWT $B.
- *
- * @param Blen    length of the existing BWT
- * @param B       existing BWT; set to NULL if non-existing
- * @param Tlen    length of input string
- * @param T       input string; '\0' represents a sentinel
- *
- * @return  the new BWT string
- */
-uint8_t *bcr_lite2(long Blen, uint8_t *B, long Tlen, const uint8_t *T) {
-  // split $T into short strings at sentinels
-  if (T == 0 || Tlen == 0) return B;
-  std::vector<const uint8_t*> reads;
-  auto p = T;
-  do {
-    reads.push_back(p);
-    p = std::find(p,T+Tlen,0);
-  } while (p++ != T+Tlen);
-
-
-  // initialize
-  long num_read_in_B = std::count(B,B+Blen,0); // count # of sentinels
-  std::vector<pair64_t> a(reads.size() - 1);
-  for (auto k=0; k<a.size(); ++k) a[k].u = k + num_read_in_B, a[k].v = k<<8;
-  B = (uint8_t*) realloc(B, Blen + Tlen);
-  memmove(B + Tlen, B, Blen); // finished BWT is always placed at the end of $B
-  uint8_t *B0 = B + Tlen;
-  B = B0;
-
-  // core loop
-  for (long i=0; !a.empty(); ++i) {
-    std::array<long,256> mc,mc2;
-    mc.fill(0);mc2.fill(0);
-
-    Blen += a.size();
-    B -= a.size();
-
-    long pre = 0;
-    uint8_t *p = B0;
-    uint8_t *q = B;
-    size_t n = 0;
-    for (auto &u:a) {
-    	u.w = reads[u.v+1]-2-i >= reads[u.v] ? *(reads[u.v+1]-2-i) : 0; // symbol to insert
-      for (long l = 0; l != u.u - pre; ++l) // copy ($u->u - $pre - 1) symbols from B0 to B
-        ++mc[*p], *q++ = *p++; // $mc: marginal counts of all processed symbols
-      *q++ = u.w;
-      pre = u.u + 1; u.u = mc[u.w]++;
-      if (u.w) a[n++] = u, ++mc2[u.w]; // $mc2: marginal counts of the current column
-    }
-    a.resize(n);
-for(auto x:a) Rprintf("(%d,%d,%d),",x.u,x.v,x.w);Rprintf("\n");
-return (uint8_t*) "ici";
-    
-    const uint8_t *end = B0 + Blen;
-    while (p < end) ++mc[*p], *q++ = *p++; // copy the rest of $B0 to $B
-
-    std::vector<pair64_t> aa(a.size());
-    std::array<long,256> ac;ac[0] = 0;
-    for(auto c=1;c!=ac.size();++c) ac[c] = ac[c-1] + mc[c-1]; // accumulative count
-    for(auto &x:a) x.u = ac[x.w] + a.size(); // compute positions for the next round
-
-    // stable counting sort ($a[k].v&0xff); also possible with an in-place non-stable radix sort, which is slower
-    std::array<long,256> b;b[0] = 0;
-    for(auto c=1;c!=b.size();++c) b[c] = b[c-1] + mc2[c-1]; // accumulative count
-    for(auto x:a) aa[b[x.w]++] = x; // this works because $a is already partially sorted
-    a = std::move(aa); // $aa now becomes $a
-
-        
-    B0 = B;
-  }
-  return B;
+  	pair64_t *b[256], *aa;
+  	for (c = 0; c != 256; ++c) mc[c] = mc2[c] = 0;
+  	end = B0 + Blen; Blen += n0; B -= n0;
+  	for (n = k = 0, p = B0, q = B, pre = 0; k < n0; ++k) {
+  		pair64_t *u = &a[k];
+  		c = P[(u->v>>8) + 1] - 2 - i >= P[u->v>>8]? *(P[(u->v>>8) + 1] - 2 - i) : 0; // symbol to insert
+  		u->v = (u->v&~0xffULL) | c;
+  		for (l = 0; l != u->u - pre; ++l) // copy ($u->u - $pre - 1) symbols from B0 to B
+  			++mc[*p], *q++ = *p++; // $mc: marginal counts of all processed symbols
+  		*q++ = c;
+  		pre = u->u + 1; u->u = mc[c]++;
+  		if (c) a[n++] = a[k], ++mc2[c]; // $mc2: marginal counts of the current column
+  	}
+  	
+  	for(auto x:std::vector<pair64_t>(a,a+n)) Rprintf("(%d,%d),",x.u,x.v);Rprintf("\n");
+  	
+  	while (p < end) ++mc[*p], *q++ = *p++; // copy the rest of $B0 to $B
+  	for (c = 1, ac[0] = 0; c != 256; ++c) ac[c] = ac[c-1] + mc[c-1]; // accumulative count
+  	for (k = 0; k < n; ++k) a[k].u += ac[a[k].v&0xff] + n; // compute positions for the next round
+  	// stable counting sort ($a[k].v&0xff); also possible with an in-place non-stable radix sort, which is slower
+  	aa = (pair64_t *) malloc(sizeof(pair64_t) * n);
+  	for (c = 1, b[0] = aa; c != 256; ++c) b[c] = b[c-1] + mc2[c-1];
+  	for (k = 0; k < n; ++k) *b[a[k].v&0xff]++ = a[k]; // this works because $a is already partially sorted
+  	free(a); a = aa; // $aa now becomes $a
+  	B0 = B; n0 = n;
+*/
+	}
+  
+  
 }
 
 // [[Rcpp::export]]
-CharacterVector timesTwo() {
+CharacterVector testBcr() {
   const uint8_t* str = (const uint8_t*) "BANANA\0BANANA\0";
-  const char* bwt = (const char*) bcr_lite(0,(uint8_t*) 0,14,str);
-  Rprintf("----\n");
-  const char* bwt2 = (const char*) bcr_lite2(0,(uint8_t*) 0,14,str);
-  return Rcpp::CharacterVector::create(bwt,bwt2);
+  uint8_t bwt[14];
+  bcr(str,str+14,bwt);
+  return Rcpp::CharacterVector::create((const char*) bwt);
 }
 
 
@@ -172,5 +91,5 @@ CharacterVector timesTwo() {
 //
 
 /*** R
-timesTwo()
+testBcr()
 */
