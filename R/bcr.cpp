@@ -11,12 +11,7 @@ typedef struct {
 
 
 void bcr(const uint8_t* text_begin, const uint8_t* text_end,uint8_t* bwt_begin) {
-	long i, k, n, n0;
-	uint8_t *p, *q, *B0;
-	pair64_t *a;
-	int c;
 	long Tlen = std::distance(text_begin,text_end);
-	long Blen = 0;
 	
 	// split $T into short strings at sentinels
 	if (text_begin == text_end) return;
@@ -28,15 +23,17 @@ void bcr(const uint8_t* text_begin, const uint8_t* text_end,uint8_t* bwt_begin) 
 		text_begin = line_end + 1;
 	}
 	P.push_back(text_begin);
-	n = P.size() - 1;
+	long n = P.size() - 1;
 	
 	// initialize
-	a = (pair64_t*) malloc(sizeof(pair64_t) * n);
-	for (k = 0; k < n; ++k) a[k].u = k, a[k].v = k<<8;
-	bwt_begin = B0 = bwt_begin + Tlen;
+	pair64_t *a = (pair64_t*) malloc(sizeof(pair64_t) * n);
+	for (long k = 0; k < n; ++k) a[k].u = k, a[k].v = k<<8;
+	uint8_t *B0 = bwt_begin = bwt_begin + Tlen;
 	
 	// core loop
-	for (i = 0, n0 = n; n0; ++i) {
+	long n0 = n;
+	long Blen = 0;	
+	for (long i = 0; n0; ++i) {
 		std::array<long,256> ac,mc,mc2;
 		mc.fill(0);mc2.fill(0);
 		
@@ -45,9 +42,11 @@ void bcr(const uint8_t* text_begin, const uint8_t* text_end,uint8_t* bwt_begin) 
 		const uint8_t *end = B0 + Blen; 
 		Blen += n0;
 		bwt_begin -= n0;
-		for (n = k = 0, p = B0, q = bwt_begin; k < n0; ++k) {
+		uint8_t *p = B0;
+		uint8_t *q = bwt_begin;
+		for (long k = n = 0; k < n0; ++k) {
 			pair64_t *u = &a[k];
-			c = P[(u->v>>8) + 1] - 2 - i >= P[u->v>>8]? *(P[(u->v>>8) + 1] - 2 - i) : 0; // symbol to insert
+			int c = P[(u->v>>8) + 1] - 2 - i >= P[u->v>>8]? *(P[(u->v>>8) + 1] - 2 - i) : 0; // symbol to insert
 			u->v = (u->v&~0xffULL) | c;
 			for (long l = 0; l != u->u - pre; ++l) // copy ($u->u - $pre - 1) symbols from B0 to B
 				++mc[*p], *q++ = *p++; // $mc: marginal counts of all processed symbols
@@ -56,13 +55,13 @@ void bcr(const uint8_t* text_begin, const uint8_t* text_end,uint8_t* bwt_begin) 
 			if (c) a[n++] = a[k], ++mc2[c]; // $mc2: marginal counts of the current column
 		}
 		while (p < end) ++mc[*p], *q++ = *p++; // copy the rest of $B0 to $B
-		for (c = 1, ac[0] = 0; c != 256; ++c) ac[c] = ac[c-1] + mc[c-1]; // accumulative count
-		for (k = 0; k < n; ++k) a[k].u += ac[a[k].v&0xff] + n; // compute positions for the next round
+		ac[0] = 0;for (int c = 1; c != 256; ++c) ac[c] = ac[c-1] + mc[c-1]; // accumulative count
+		for (long k = 0; k < n; ++k) a[k].u += ac[a[k].v&0xff] + n; // compute positions for the next round
 
 		// stable counting sort ($a[k].v&0xff); also possible with an in-place non-stable radix sort, which is slower
 		aa = (pair64_t *) malloc(sizeof(pair64_t) * n);
-		for (c = 1, b[0] = aa; c != 256; ++c) b[c] = b[c-1] + mc2[c-1];
-		for (k = 0; k < n; ++k) *b[a[k].v&0xff]++ = a[k]; // this works because $a is already partially sorted
+		b[0] = aa;for (int c = 1; c != 256; ++c) b[c] = b[c-1] + mc2[c-1];
+		for (long k = 0; k < n; ++k) *b[a[k].v&0xff]++ = a[k]; // this works because $a is already partially sorted
 		
 		free(a); a = aa; // $aa now becomes $a
 		B0 = bwt_begin; n0 = n;
