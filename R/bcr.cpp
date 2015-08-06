@@ -45,8 +45,7 @@ void bcr(const uint8_t* text_begin, const uint8_t* text_end, uint8_t* bwt_begin)
 		mc.fill(0);mc2.fill(0);
 		
 		auto n = a.begin();
-		for (auto k = 0; k < a.size(); ++k) {
-			pair64_t& u = a[k];
+		for (auto &u:a) {
 			u.w = lines[u.v+1]-2-i >= lines[u.v]? *(lines[u.v+1]-2-i) : 0; // symbol to insert
 			for (long l = 0; l != u.u - pre; ++l) // copy ($u->u - $pre - 1) symbols from bwt0 to bwt
 				++mc[*p], *q++ = *p++; // $mc: marginal counts of all processed symbols
