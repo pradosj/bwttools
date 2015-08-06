@@ -27,28 +27,27 @@ void bcr(const uint8_t* text_begin, const uint8_t* text_end, uint8_t* bwt_begin)
 	lines.push_back(text_end);
 
 	
-	
 	// initialize
 	std::vector<pair64_t> a(lines.size()-1),aa;
 	uint64_t k=0;for(auto &x:a) x.u = x.v = k++;
 	uint8_t *bwt_end = bwt_begin + std::distance(text_begin,text_end);
 	uint8_t *bwt0_begin = bwt_begin = bwt_end;
-	
+
+		
 	// core loop
 	for (long i = 0; !a.empty(); ++i) {
 		// initialize loop variables
-		long pre = 0;
+		uint64_t pre = 0;
 		bwt_begin -= a.size();
 		const uint8_t *p = bwt0_begin;
 		uint8_t *q = bwt_begin;
-		std::array<uint64_t,256> mc;
-		mc.fill(0);
+		std::array<uint64_t,256> mc;mc.fill(0);
 		
 		// iterate over last characters of the lines ordered according to a[].v
 		aa.clear();
 		for (auto &u:a) {
 			u.w = lines[u.v+1]-2-i >= lines[u.v]? *(lines[u.v+1]-2-i) : 0; // symbol to insert
-			for (long l = 0; l != u.u - pre; ++l) {
+			for (uint64_t l = 0; l != u.u - pre; ++l) {
 				++mc[*p]; // $mc: marginal counts of all processed symbols
 				*q++ = *p++; // copy ($u->u - $pre - 1) symbols from bwt0 to bwt
 			}
