@@ -43,7 +43,7 @@ void bcr(const uint8_t* text_begin, const uint8_t* text_end,uint8_t* bwt_begin) 
 		const uint8_t *p = bwt0_begin;
 		uint8_t *q = bwt_begin;
 		
-		std::array<long,256> ac,mc,mc2;
+		std::array<uint64_t,256> ac,mc,mc2,b;
 		mc.fill(0);mc2.fill(0);
 		
 		for (auto k = n = 0; k < n0; ++k) {
@@ -53,15 +53,16 @@ void bcr(const uint8_t* text_begin, const uint8_t* text_end,uint8_t* bwt_begin) 
 				++mc[*p], *q++ = *p++; // $mc: marginal counts of all processed symbols
 			*q++ = u.w;
 			pre = u.u + 1; u.u = mc[u.w]++;
-			if (u.w) a[n++] = a[k], ++mc2[u.w]; // $mc2: marginal counts of the current column
+			if (u.w) a[n++] = u, ++mc2[u.w]; // $mc2: marginal counts of the current column
 		}
+		a.resize(n);
+		
 		std::copy(p,end,q); // copy the rest of $bwt0 to $bwt
 		while(p < end) ++mc[*(p++)];
 		ac[0] = 0;for(int c = 1; c != ac.size(); ++c) ac[c] = ac[c-1] + mc[c-1]; // accumulative count
 		for(auto &x:a) x.u += ac[x.w] + n; // compute positions for the next round
 
 		// stable counting sort ($a[k].v&0xff); also possible with an in-place non-stable radix sort, which is slower
-		std::array<uint64_t,256> b;
 		b[0] = 0;for (int c = 1; c != b.size(); ++c) b[c] = b[c-1] + mc2[c-1];
 		for(auto x:a) aa[b[x.w]++] = x; // this works because $a is already partially sorted
 		
@@ -72,7 +73,7 @@ void bcr(const uint8_t* text_begin, const uint8_t* text_end,uint8_t* bwt_begin) 
 
 // [[Rcpp::export]]
 CharacterVector testBcr() {
-  const uint8_t* str = (const uint8_t*) "BANANA\0BANANA\0";
+  const uint8_t* str = (const uint8_t*) "BANA\0BANANA\0";
   uint8_t bwt[14];
   bcr(str,str+14,bwt);
   return Rcpp::CharacterVector::create((const char*) bwt);
