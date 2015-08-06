@@ -83,7 +83,7 @@ uint8_t *bcr_lite(long Blen, uint8_t *B, long Tlen, const uint8_t *T)
 
 // [[Rcpp::export]]
 CharacterVector testBcr() {
-	const int len = 12;
+	const int len = 26;
 	const uint8_t* str = (const uint8_t*) "BANA\0BANANA\0ANANAS\0RANANA\0";
 	const char* bwt = (const char*) bcr_lite(0,(uint8_t*) 0,len,str);
 	std::string BWT((const char*) bwt,len);

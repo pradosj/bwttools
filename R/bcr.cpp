@@ -25,10 +25,9 @@ void bcr(const uint8_t* text_begin, const uint8_t* text_end, uint8_t* bwt_begin)
 		text_begin = line_end + 1;
 	}
 	lines.push_back(text_begin);
-	auto n = lines.size() - 1;
-	
+
 	// initialize
-	std::vector<pair64_t> a(n),aa(n);
+	std::vector<pair64_t> a(lines.size()-1),aa(lines.size() - 1);
 	uint64_t k=0;for(auto &x:a) x.u = x.v = k++;
 	uint8_t *bwt0_begin = bwt_begin = bwt_begin + Tlen;
 	
@@ -74,7 +73,7 @@ void bcr(const uint8_t* text_begin, const uint8_t* text_end, uint8_t* bwt_begin)
 
 // [[Rcpp::export]]
 CharacterVector testBcr() {
-	const int len = 12;
+	const int len = 26;
 	const uint8_t* str = (const uint8_t*) "BANA\0BANANA\0ANANAS\0RANANA\0";
 	uint8_t bwt[len];
 	bcr(str,str+len,bwt);
