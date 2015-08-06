@@ -1,6 +1,7 @@
 #include <Rcpp.h>
 #include <array>
 #include <algorithm>
+#include <cassert>
 
 using namespace Rcpp;
 // [[Rcpp::plugins(cpp11)]]
@@ -13,7 +14,7 @@ typedef struct {
 
 
 void bcr(const uint8_t* text_begin, const uint8_t* text_end, uint8_t* bwt_begin) {
-
+	
 	// split input text into lines
 	if (text_begin == text_end) return;
 	std::vector<const uint8_t*> lines;
@@ -25,23 +26,29 @@ void bcr(const uint8_t* text_begin, const uint8_t* text_end, uint8_t* bwt_begin)
 	}
 	lines.push_back(text_end);
 
+	
+	
 	// initialize
+	
+	
 	std::vector<pair64_t> a(lines.size()-1),aa;
 	uint64_t k=0;for(auto &x:a) x.u = x.v = k++;
 	uint8_t *bwt0_begin = bwt_begin = bwt_begin + std::distance(text_begin,text_end);
 	
+
+		
 	// core loop
-	long Blen = 0;	
+	long Blen = 0;
 	for (long i = 0; !a.empty(); ++i) {
 		// initialize loop variables
 		long pre = 0;
-		const uint8_t *end = bwt0_begin + Blen;
+		const uint8_t *bwt0_end = bwt0_begin + Blen;
 		Blen += a.size();
 		bwt_begin -= a.size();
 		const uint8_t *p = bwt0_begin;
 		uint8_t *q = bwt_begin;
-		std::array<uint64_t,256> ac,mc,mc2,b;
-		mc.fill(0);mc2.fill(0);
+		std::array<uint64_t,256> mc;
+		mc.fill(0);
 		
 		// iterate over last characters of the lines ordered according to a[].v
 		aa.clear();
@@ -54,19 +61,21 @@ void bcr(const uint8_t* text_begin, const uint8_t* text_end, uint8_t* bwt_begin)
 			*q++ = u.w;
 			pre = u.u + 1;
 			u.u = mc[u.w]++;
-			if (u.w) {
-				aa.push_back(u);
-				++mc2[u.w]; // $mc2: marginal counts of the current column
-			} 
+			if (u.w) aa.push_back(u);
 		}
 		a.resize(aa.size());
 		
-		std::copy(p,end,q); // copy the rest of $bwt0 to $bwt
-		while(p < end) ++mc[*(p++)];
+		
+		assert(p==q);//std::copy(p,end,q); // copy the rest of $bwt0 to $bwt
+		while(p < bwt0_end) ++mc[*(p++)];
+		
+		std::array<uint64_t,256> ac;
 		ac[0] = 0;for(int c = 1; c != ac.size(); ++c) ac[c] = ac[c-1] + mc[c-1]; // accumulative count
 		for(auto &x:aa) x.u += ac[x.w] + aa.size(); // compute positions for the next round
 
 		// stable counting sort ($a[k].v&0xff); also possible with an in-place non-stable radix sort, which is slower
+		std::array<uint64_t,256> mc2,b;
+		mc2.fill(0);for(auto x:aa) ++mc2[x.w];
 		b[0] = 0;for (int c = 1; c != b.size(); ++c) b[c] = b[c-1] + mc2[c-1];
 		for(auto x:aa) a[b[x.w]++] = x; // this works because $a is already partially sorted
 		
