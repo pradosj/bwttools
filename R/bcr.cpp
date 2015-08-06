@@ -37,11 +37,11 @@ void bcr(const uint8_t* text_begin, const uint8_t* text_end, uint8_t* bwt_begin)
 		bwt_begin -= a.size();
 		const uint8_t *p = bwt0_begin;
 		uint8_t *q = bwt_begin;
-		
-		// iterate over last characters of the lines ordered according to a[].v
+		aa.clear();
 		mc.fill(0);
 		mc2.fill(0);
-		aa.clear();
+		
+		// iterate over last characters of the sorted lines
 		for (auto &u:a) {
 			auto c = (eol[u.v]>=text_begin?*eol[u.v]:0);
 			for (uint64_t l = 0; l != u.u - pre; ++l) {
