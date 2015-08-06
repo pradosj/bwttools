@@ -28,7 +28,7 @@ void bcr(const uint8_t* text_begin, const uint8_t* text_end, uint8_t* bwt_begin)
 	uint64_t k=0;for(auto &x:a) x.u = x.v = k++;
 	uint8_t *bwt_end = bwt_begin + std::distance(text_begin,text_end);
 	uint8_t *bwt0_begin = bwt_begin = bwt_end;
-	std::array<uint64_t,256> mc,mc2,b;
+	std::array<uint64_t,256> mc,mc2,b,ac;
 		
 	// core loop
 	while (!a.empty()) {
@@ -61,18 +61,18 @@ void bcr(const uint8_t* text_begin, const uint8_t* text_end, uint8_t* bwt_begin)
 		assert(p==q);
 		while(p < bwt_end) ++mc[*(p++)];
 		
-		std::array<uint64_t,256> ac;
+		// compute pos for next round
 		ac[0] = 0;for(int c = 1; c != ac.size(); ++c) ac[c] = ac[c-1] + mc[c-1];
 		for(auto &x:aa) {
 			auto c = (eol[x.v]>=text_begin?*eol[x.v]:0);
-			x.u += ac[c] + aa.size(); // compute pos for next round	
+			x.u += ac[c] + aa.size();
 		}
 
-		// stable counting sort ($a[k].w);
+		// stable counting sort
 		b[0] = 0;for (int c = 1; c != b.size(); ++c) b[c] = b[c-1] + mc2[c-1];
 		for(auto x:aa) {
 			auto c = (eol[x.v]>=text_begin?*eol[x.v]:0);
-			a[b[c]++] = x; // this works because $a is already partially sorted
+			a[b[c]++] = x;
 		}
 
 		// move EOL iterators to previous character
