@@ -29,21 +29,15 @@ void bcr(const uint8_t* text_begin, const uint8_t* text_end, uint8_t* bwt_begin)
 	
 	
 	// initialize
-	
-	
 	std::vector<pair64_t> a(lines.size()-1),aa;
 	uint64_t k=0;for(auto &x:a) x.u = x.v = k++;
-	uint8_t *bwt0_begin = bwt_begin = bwt_begin + std::distance(text_begin,text_end);
+	uint8_t *bwt_end = bwt_begin + std::distance(text_begin,text_end);
+	uint8_t *bwt0_begin = bwt_begin = bwt_end;
 	
-
-		
 	// core loop
-	long Blen = 0;
 	for (long i = 0; !a.empty(); ++i) {
 		// initialize loop variables
 		long pre = 0;
-		const uint8_t *bwt0_end = bwt0_begin + Blen;
-		Blen += a.size();
 		bwt_begin -= a.size();
 		const uint8_t *p = bwt0_begin;
 		uint8_t *q = bwt_begin;
@@ -67,7 +61,7 @@ void bcr(const uint8_t* text_begin, const uint8_t* text_end, uint8_t* bwt_begin)
 		
 		
 		assert(p==q);//std::copy(p,end,q); // copy the rest of $bwt0 to $bwt
-		while(p < bwt0_end) ++mc[*(p++)];
+		while(p < bwt_end) ++mc[*(p++)];
 		
 		std::array<uint64_t,256> ac;
 		ac[0] = 0;for(int c = 1; c != ac.size(); ++c) ac[c] = ac[c-1] + mc[c-1]; // accumulative count
