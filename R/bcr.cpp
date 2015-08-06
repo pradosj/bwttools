@@ -20,7 +20,8 @@ void bcr(const uint8_t* text_begin, const uint8_t* text_end, uint8_t* bwt_begin)
 	std::vector<const uint8_t*> lines;
 	for(auto i=text_begin;i!=text_end;++i) {
 		auto line_end = std::find(i,text_end,0);
-		if (line_end==text_end) break; // the text is not ending with eol, the last line is skipped
+		// if the text is not ending with eol, the last line is skipped
+		if (line_end==text_end) break;
 		lines.push_back(i);
 		i = line_end;
 	}
@@ -46,10 +47,10 @@ void bcr(const uint8_t* text_begin, const uint8_t* text_end, uint8_t* bwt_begin)
 		// iterate over last characters of the lines ordered according to a[].v
 		aa.clear();
 		for (auto &u:a) {
-			u.w = lines[u.v+1]-2-i >= lines[u.v]? *(lines[u.v+1]-2-i) : 0; // symbol to insert
+			u.w = lines[u.v+1]-2-i >= lines[u.v]? *(lines[u.v+1]-2-i) : 0;
 			for (uint64_t l = 0; l != u.u - pre; ++l) {
-				++mc[*p]; // $mc: marginal counts of all processed symbols
-				*q++ = *p++; // copy ($u->u - $pre - 1) symbols from bwt0 to bwt
+				++mc[*p];
+				*q++ = *p++;
 			}
 			*q++ = u.w;
 			pre = u.u + 1;
@@ -58,15 +59,14 @@ void bcr(const uint8_t* text_begin, const uint8_t* text_end, uint8_t* bwt_begin)
 		}
 		a.resize(aa.size());
 		
-		
-		assert(p==q);//std::copy(p,end,q); // copy the rest of $bwt0 to $bwt
+		assert(p==q);//std::copy(p,end,q);
 		while(p < bwt_end) ++mc[*(p++)];
 		
 		std::array<uint64_t,256> ac;
-		ac[0] = 0;for(int c = 1; c != ac.size(); ++c) ac[c] = ac[c-1] + mc[c-1]; // accumulative count
-		for(auto &x:aa) x.u += ac[x.w] + aa.size(); // compute positions for the next round
+		ac[0] = 0;for(int c = 1; c != ac.size(); ++c) ac[c] = ac[c-1] + mc[c-1];
+		for(auto &x:aa) x.u += ac[x.w] + aa.size(); // compute pos for next round
 
-		// stable counting sort ($a[k].v&0xff); also possible with an in-place non-stable radix sort, which is slower
+		// stable counting sort ($a[k].w);
 		std::array<uint64_t,256> mc2,b;
 		mc2.fill(0);for(auto x:aa) ++mc2[x.w];
 		b[0] = 0;for (int c = 1; c != b.size(); ++c) b[c] = b[c-1] + mc2[c-1];
