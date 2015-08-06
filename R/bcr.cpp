@@ -13,24 +13,22 @@ typedef struct {
 
 
 void bcr(const uint8_t* text_begin, const uint8_t* text_end, uint8_t* bwt_begin) {
-	auto Tlen = std::distance(text_begin,text_end);
-	
+
 	// split $T into short strings at sentinels
 	if (text_begin == text_end) return;
 	std::vector<const uint8_t*> lines;
-	while(text_begin != text_end) {
-		auto line_end = std::find(text_begin,text_end,0);
+	for(auto i=text_begin;i != text_end;++i) {
+		auto line_end = std::find(i,text_end,0);
 		if (line_end==text_end) break; // the text is not ending with eol, the last line is skipped
-		lines.push_back(text_begin);
-		text_begin = line_end + 1;
+		lines.push_back(i);
+		i = line_end;
 	}
 	lines.push_back(text_begin);
-	auto n = lines.size() - 1;
-	
+
 	// initialize
-	std::vector<pair64_t> a(n),aa(n);
+	std::vector<pair64_t> a(lines.size()-1),aa(lines.size()-1);
 	uint64_t k=0;for(auto &x:a) x.u = x.v = k++;
-	uint8_t *bwt0_begin = bwt_begin = bwt_begin + Tlen;
+	auto bwt0_begin = bwt_begin = bwt_begin + std::distance(text_begin,text_end);
 	
 	// core loop
 	long Blen = 0;	
@@ -46,13 +44,13 @@ void bcr(const uint8_t* text_begin, const uint8_t* text_end, uint8_t* bwt_begin)
 		mc.fill(0);mc2.fill(0);
 		
 		auto n = a.begin();
-		for (auto k = 0; k < a.size(); ++k) {
-			pair64_t& u = a[k];
+		for (auto &u:a) {
 			u.w = lines[u.v+1]-2-i >= lines[u.v]? *(lines[u.v+1]-2-i) : 0; // symbol to insert
 			for (long l = 0; l != u.u - pre; ++l) // copy ($u->u - $pre - 1) symbols from bwt0 to bwt
 				++mc[*p], *q++ = *p++; // $mc: marginal counts of all processed symbols
 			*q++ = u.w;
-			pre = u.u + 1; u.u = mc[u.w]++;
+			pre = u.u + 1;
+			u.u = mc[u.w]++;
 			if (u.w) *(n++) = u, ++mc2[u.w]; // $mc2: marginal counts of the current column
 		}
 		a.resize(std::distance(a.begin(),n));
@@ -74,10 +72,11 @@ void bcr(const uint8_t* text_begin, const uint8_t* text_end, uint8_t* bwt_begin)
 
 // [[Rcpp::export]]
 CharacterVector testBcr() {
-  const uint8_t* str = (const uint8_t*) "BANA\0BANANA\0";
-  uint8_t bwt[14];
-  bcr(str,str+14,bwt);
-  std::string BWT((const char*) bwt,14);
+	const int len = 12;
+  const uint8_t* str = (const uint8_t*) "BANA\0BANANA\0ANANAS\0RANANA\0";
+  uint8_t bwt[len];
+  bcr(str,str+len,bwt);
+  std::string BWT((const char*) bwt,len);
   std::replace(BWT.begin(),BWT.end(),'\0','$');
   return Rcpp::CharacterVector::create(BWT);
 }
