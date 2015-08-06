@@ -83,9 +83,12 @@ uint8_t *bcr_lite(long Blen, uint8_t *B, long Tlen, const uint8_t *T)
 
 // [[Rcpp::export]]
 CharacterVector testBcr() {
-	const uint8_t* str = (const uint8_t*) "BANANA\0BANANA\0";
-	const char* bwt = (const char*) bcr_lite(0,(uint8_t*) 0,14,str);
-	return Rcpp::CharacterVector::create(bwt);
+	const int len = 12;
+	const uint8_t* str = (const uint8_t*) "BANA\0BANANA\0ANANAS\0RANANA\0";
+	const char* bwt = (const char*) bcr_lite(0,(uint8_t*) 0,len,str);
+	std::string BWT((const char*) bwt,len);
+	std::replace(BWT.begin(),BWT.end(),'\0','$');
+	return Rcpp::CharacterVector::create(BWT);
 }
 
 

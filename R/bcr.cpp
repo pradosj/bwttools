@@ -74,12 +74,13 @@ void bcr(const uint8_t* text_begin, const uint8_t* text_end, uint8_t* bwt_begin)
 
 // [[Rcpp::export]]
 CharacterVector testBcr() {
-  const uint8_t* str = (const uint8_t*) "BANA\0BANANA\0";
-  uint8_t bwt[14];
-  bcr(str,str+14,bwt);
-  std::string BWT((const char*) bwt,14);
-  std::replace(BWT.begin(),BWT.end(),'\0','$');
-  return Rcpp::CharacterVector::create(BWT);
+	const int len = 12;
+	const uint8_t* str = (const uint8_t*) "BANA\0BANANA\0ANANAS\0RANANA\0";
+	uint8_t bwt[len];
+	bcr(str,str+len,bwt);
+	std::string BWT((const char*) bwt,len);
+	std::replace(BWT.begin(),BWT.end(),'\0','$');
+	return Rcpp::CharacterVector::create(BWT);
 }
 
 
