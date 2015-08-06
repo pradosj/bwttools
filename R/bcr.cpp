@@ -14,7 +14,7 @@ typedef struct {
 
 void bcr(const uint8_t* text_begin, const uint8_t* text_end, uint8_t* bwt_begin) {
 
-	// split $T into short strings at sentinels
+	// split input text into lines
 	if (text_begin == text_end) return;
 	std::vector<const uint8_t*> lines;
 	for(auto i=text_begin;i!=text_end;++i) {
@@ -28,32 +28,40 @@ void bcr(const uint8_t* text_begin, const uint8_t* text_end, uint8_t* bwt_begin)
 	// initialize
 	std::vector<pair64_t> a(lines.size()-1),aa(lines.size() - 1);
 	uint64_t k=0;for(auto &x:a) x.u = x.v = k++;
-	uint8_t *bwt0_begin = bwt_begin = bwt_begin + std::distance(text_begin,text_end);;
+	uint8_t *bwt0_begin = bwt_begin = bwt_begin + std::distance(text_begin,text_end);
 	
 	// core loop
 	long Blen = 0;	
 	for (long i = 0; !a.empty(); ++i) {
+		// initialize loop variables
 		long pre = 0;
 		const uint8_t *end = bwt0_begin + Blen;
 		Blen += a.size();
 		bwt_begin -= a.size();
 		const uint8_t *p = bwt0_begin;
 		uint8_t *q = bwt_begin;
-		
 		std::array<uint64_t,256> ac,mc,mc2,b;
 		mc.fill(0);mc2.fill(0);
 		
+		// iterate over last characters of the lines ordered according to a[].v
 		auto n = a.begin();
 		for (auto &u:a) {
 			u.w = lines[u.v+1]-2-i >= lines[u.v]? *(lines[u.v+1]-2-i) : 0; // symbol to insert
-			for (long l = 0; l != u.u - pre; ++l) // copy ($u->u - $pre - 1) symbols from bwt0 to bwt
-				++mc[*p], *q++ = *p++; // $mc: marginal counts of all processed symbols
+			for (long l = 0; l != u.u - pre; ++l) {
+				++mc[*p]; // $mc: marginal counts of all processed symbols
+				*q++ = *p++; // copy ($u->u - $pre - 1) symbols from bwt0 to bwt
+			}
 			*q++ = u.w;
-			pre = u.u + 1; u.u = mc[u.w]++;
-			if (u.w) *(n++) = u, ++mc2[u.w]; // $mc2: marginal counts of the current column
+			pre = u.u + 1;
+			u.u = mc[u.w]++;
+			if (u.w) {
+				*(n++) = u;	
+				++mc2[u.w]; // $mc2: marginal counts of the current column
+			} 
 		}
 		a.resize(std::distance(a.begin(),n));
 		aa.resize(a.size());
+
 		
 		std::copy(p,end,q); // copy the rest of $bwt0 to $bwt
 		while(p < end) ++mc[*(p++)];
