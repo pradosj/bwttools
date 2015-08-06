@@ -13,23 +13,22 @@ typedef struct {
 
 
 void bcr(const uint8_t* text_begin, const uint8_t* text_end, uint8_t* bwt_begin) {
-	auto Tlen = std::distance(text_begin,text_end);
-	
+
 	// split $T into short strings at sentinels
 	if (text_begin == text_end) return;
 	std::vector<const uint8_t*> lines;
-	while(text_begin != text_end) {
-		auto line_end = std::find(text_begin,text_end,0);
+	for(auto i=text_begin;i!=text_end;++i) {
+		auto line_end = std::find(i,text_end,0);
 		if (line_end==text_end) break; // the text is not ending with eol, the last line is skipped
-		lines.push_back(text_begin);
-		text_begin = line_end + 1;
+		lines.push_back(i);
+		i = line_end;
 	}
-	lines.push_back(text_begin);
+	lines.push_back(text_end);
 
 	// initialize
 	std::vector<pair64_t> a(lines.size()-1),aa(lines.size() - 1);
 	uint64_t k=0;for(auto &x:a) x.u = x.v = k++;
-	uint8_t *bwt0_begin = bwt_begin = bwt_begin + Tlen;
+	uint8_t *bwt0_begin = bwt_begin = bwt_begin + std::distance(text_begin,text_end);;
 	
 	// core loop
 	long Blen = 0;	
