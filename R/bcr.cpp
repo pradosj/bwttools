@@ -26,7 +26,7 @@ void bcr(const uint8_t* text_begin, const uint8_t* text_end, uint8_t* bwt_begin)
 	lines.push_back(text_end);
 
 	// initialize
-	std::vector<pair64_t> a(lines.size()-1),aa(lines.size() - 1);
+	std::vector<pair64_t> a(lines.size()-1),aa;
 	uint64_t k=0;for(auto &x:a) x.u = x.v = k++;
 	uint8_t *bwt0_begin = bwt_begin = bwt_begin + std::distance(text_begin,text_end);
 	
@@ -44,7 +44,7 @@ void bcr(const uint8_t* text_begin, const uint8_t* text_end, uint8_t* bwt_begin)
 		mc.fill(0);mc2.fill(0);
 		
 		// iterate over last characters of the lines ordered according to a[].v
-		auto n = a.begin();
+		aa.clear();
 		for (auto &u:a) {
 			u.w = lines[u.v+1]-2-i >= lines[u.v]? *(lines[u.v+1]-2-i) : 0; // symbol to insert
 			for (long l = 0; l != u.u - pre; ++l) {
@@ -55,24 +55,21 @@ void bcr(const uint8_t* text_begin, const uint8_t* text_end, uint8_t* bwt_begin)
 			pre = u.u + 1;
 			u.u = mc[u.w]++;
 			if (u.w) {
-				*(n++) = u;	
+				aa.push_back(u);
 				++mc2[u.w]; // $mc2: marginal counts of the current column
 			} 
 		}
-		a.resize(std::distance(a.begin(),n));
-		aa.resize(a.size());
-
+		a.resize(aa.size());
 		
 		std::copy(p,end,q); // copy the rest of $bwt0 to $bwt
 		while(p < end) ++mc[*(p++)];
 		ac[0] = 0;for(int c = 1; c != ac.size(); ++c) ac[c] = ac[c-1] + mc[c-1]; // accumulative count
-		for(auto &x:a) x.u += ac[x.w] + a.size(); // compute positions for the next round
+		for(auto &x:aa) x.u += ac[x.w] + aa.size(); // compute positions for the next round
 
 		// stable counting sort ($a[k].v&0xff); also possible with an in-place non-stable radix sort, which is slower
 		b[0] = 0;for (int c = 1; c != b.size(); ++c) b[c] = b[c-1] + mc2[c-1];
-		for(auto x:a) aa[b[x.w]++] = x; // this works because $a is already partially sorted
+		for(auto x:aa) a[b[x.w]++] = x; // this works because $a is already partially sorted
 		
-		std::swap(a,aa); // $aa now becomes $a
 		bwt0_begin = bwt_begin;
 	}
 }
