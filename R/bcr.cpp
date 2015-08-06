@@ -8,7 +8,6 @@ using namespace Rcpp;
 
 typedef struct {
 	uint64_t u,v;
-	uint8_t w;
 } pair64_t;
 
 
@@ -44,7 +43,7 @@ void bcr(const uint8_t* text_begin, const uint8_t* text_end, uint8_t* bwt_begin)
 		mc2.fill(0);
 		aa.clear();
 		for (auto &u:a) {
-			auto c = u.w = eol[u.v]>=text_begin?*eol[u.v]:0;
+			auto c = (eol[u.v]>=text_begin?*eol[u.v]:0);
 			for (uint64_t l = 0; l != u.u - pre; ++l) {
 				++mc[*p];
 				*q++ = *p++;
@@ -64,13 +63,19 @@ void bcr(const uint8_t* text_begin, const uint8_t* text_end, uint8_t* bwt_begin)
 		
 		std::array<uint64_t,256> ac;
 		ac[0] = 0;for(int c = 1; c != ac.size(); ++c) ac[c] = ac[c-1] + mc[c-1];
-		for(auto &x:aa) x.u += ac[x.w] + aa.size(); // compute pos for next round
+		for(auto &x:aa) {
+			auto c = (eol[x.v]>=text_begin?*eol[x.v]:0);
+			x.u += ac[c] + aa.size(); // compute pos for next round	
+		}
 
 		// stable counting sort ($a[k].w);
 		b[0] = 0;for (int c = 1; c != b.size(); ++c) b[c] = b[c-1] + mc2[c-1];
-		for(auto x:aa) a[b[x.w]++] = x; // this works because $a is already partially sorted
+		for(auto x:aa) {
+			auto c = (eol[x.v]>=text_begin?*eol[x.v]:0);
+			a[b[c]++] = x; // this works because $a is already partially sorted
+		}
 
-		//move EOL iterators to previous character
+		// move EOL iterators to previous character
 		for(auto &l:eol) if (l>=text_begin && *l) --l;
 
 		bwt0_begin = bwt_begin;
