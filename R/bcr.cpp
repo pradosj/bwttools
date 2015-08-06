@@ -28,7 +28,7 @@ void bcr(const uint8_t* text_begin, const uint8_t* text_end,uint8_t* bwt_begin) 
 	long n = P.size() - 1;
 	
 	// initialize
-	pair64_t *a = (pair64_t*) malloc(sizeof(pair64_t) * n);
+	std::vector<pair64_t> a(n),aa(n);
 	for (long k = 0; k < n; ++k) a[k].u = k, a[k].v = k;
 	uint8_t *B0 = bwt_begin = bwt_begin + Tlen;
 	
@@ -62,15 +62,13 @@ void bcr(const uint8_t* text_begin, const uint8_t* text_end,uint8_t* bwt_begin) 
 		for(long k = 0; k < n; ++k) a[k].u += ac[a[k].w] + n; // compute positions for the next round
 
 		// stable counting sort ($a[k].v&0xff); also possible with an in-place non-stable radix sort, which is slower
-		pair64_t *aa = (pair64_t *) malloc(sizeof(pair64_t) * n);
-		pair64_t *b[256];
-		b[0] = aa;for (int c = 1; c != 256; ++c) b[c] = b[c-1] + mc2[c-1];
-		for (long k = 0; k < n; ++k) *b[a[k].w]++ = a[k]; // this works because $a is already partially sorted
+		std::array<uint64_t,256> b;
+		b[0] = 0;for (int c = 1; c != 256; ++c) b[c] = b[c-1] + mc2[c-1];
+		for (long k = 0; k < n; ++k) aa[b[a[k].w]++] = a[k]; // this works because $a is already partially sorted
 		
-		free(a); a = aa; // $aa now becomes $a
+		std::swap(a,aa); // $aa now becomes $a
 		B0 = bwt_begin; n0 = n;
 	}
-	free(a);
 }
 
 // [[Rcpp::export]]
