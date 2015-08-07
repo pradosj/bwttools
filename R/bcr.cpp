@@ -26,7 +26,7 @@ void bcr(const uint8_t* text_begin, const uint8_t* text_end, uint8_t* bwt_begin)
 	}
 	
 	// initialize
-	std::vector<pair64_t> a(eol.size()),aa;
+	std::vector<pair64_t> a(eol.size()),aa(eol.size());
 	uint64_t k=0;for(auto &x:a) x.u = x.v = k++;
 	uint8_t *bwt_end = bwt_begin + std::distance(text_begin,text_end);
 	uint8_t *bwti_begin(bwt_end),*bwtj_begin(bwt_end);
@@ -39,11 +39,11 @@ void bcr(const uint8_t* text_begin, const uint8_t* text_end, uint8_t* bwt_begin)
 		bwtj_begin -= a.size();
 		const uint8_t *p = bwti_begin;
 		uint8_t *q = bwtj_begin;
-		aa.clear();
 		mc.fill(0);
 		mc2.fill(0);
 		
 		// iterate over last characters of the sorted lines
+		auto n = a.begin();
 		for (auto &u:a) {
 			for (uint64_t l = 0; l != u.u - pre; ++l) {
 				++mc[*p];
@@ -55,28 +55,30 @@ void bcr(const uint8_t* text_begin, const uint8_t* text_end, uint8_t* bwt_begin)
 			pre = u.u + 1;
 			u.u = mc[c]++;
 			if (c) {
-				aa.push_back(u);
+				*n++ = u;
 				++mc2[c];
 			}
 		}
-		a.resize(aa.size());
+		a.resize(std::distance(a.begin(),n));
 		
 		assert(p==q);
 		while(p < bwt_end) ++mc[*(p++)];
 		
 		// compute pos for next round
 		ac[0] = 0;for(int c = 1; c != ac.size(); ++c) ac[c] = ac[c-1] + mc[c-1];
-		for(auto &x:aa) {
+		for(auto &x:a) {
 			auto c = (eol[x.v]>=text_begin?*eol[x.v]:0);
-			x.u += ac[c] + aa.size();
+			x.u += ac[c] + a.size();
 		}
 
 		// stable counting sort
+		aa.resize(a.size());
 		b[0] = 0;for (int c = 1; c != b.size(); ++c) b[c] = b[c-1] + mc2[c-1];
-		for(auto x:aa) {
+		for(auto x:a) {
 			auto c = (eol[x.v]>=text_begin?*eol[x.v]:0);
-			a[b[c]++] = x;
+			aa[b[c]++] = x;
 		}
+		std::swap(a,aa);
 
 		// move EOL iterators to previous character
 		for(auto &l:eol) if (l>=text_begin && *l) --l;
