@@ -8,6 +8,8 @@ using namespace Rcpp;
 
 typedef struct {
 	uint64_t u,v;
+	//v: line number in the original text with the character pointed by the structure
+	//u: number of occurence of the character in bwt before its current position
 } pair64_t;
 
 
@@ -27,27 +29,28 @@ void bcr(const uint8_t* text_begin, const uint8_t* text_end, uint8_t* bwt_begin)
 	std::vector<pair64_t> a(eol.size()),aa;
 	uint64_t k=0;for(auto &x:a) x.u = x.v = k++;
 	uint8_t *bwt_end = bwt_begin + std::distance(text_begin,text_end);
-	uint8_t *bwt0_begin = bwt_begin = bwt_end;
+	uint8_t *bwti_begin(bwt_end),*bwtj_begin(bwt_end);
 	std::array<uint64_t,256> mc,mc2,b,ac;
-		
+
 	// core loop
 	while (!a.empty()) {
 		// initialize loop variables
 		uint64_t pre = 0;
-		bwt_begin -= a.size();
-		const uint8_t *p = bwt0_begin;
-		uint8_t *q = bwt_begin;
+		bwtj_begin -= a.size();
+		const uint8_t *p = bwti_begin;
+		uint8_t *q = bwtj_begin;
 		aa.clear();
 		mc.fill(0);
 		mc2.fill(0);
 		
 		// iterate over last characters of the sorted lines
 		for (auto &u:a) {
-			auto c = (eol[u.v]>=text_begin?*eol[u.v]:0);
 			for (uint64_t l = 0; l != u.u - pre; ++l) {
 				++mc[*p];
 				*q++ = *p++;
 			}
+			
+			auto c = (eol[u.v]>=text_begin?*eol[u.v]:0);
 			*q++ = c;
 			pre = u.u + 1;
 			u.u = mc[c]++;
@@ -78,7 +81,7 @@ void bcr(const uint8_t* text_begin, const uint8_t* text_end, uint8_t* bwt_begin)
 		// move EOL iterators to previous character
 		for(auto &l:eol) if (l>=text_begin && *l) --l;
 
-		bwt0_begin = bwt_begin;
+		bwti_begin = bwtj_begin;
 	}
 }
 
