@@ -65,7 +65,7 @@ void bcr(const uint8_t* text_begin, const uint8_t* text_end, uint8_t* bwt_begin)
 		while(p < bwt_end) ++mc[*(p++)];
 		
 		// compute pos for next round
-		ac[0] = 0;for(int c = 1; c != ac.size(); ++c) ac[c] = ac[c-1] + mc[c-1];
+		ac[0] = 0;std::partial_sum(mc.begin(),mc.end()-1,ac.begin()+1);
 		for(auto &x:a) {
 			auto c = (eol[x.v]>=text_begin?*eol[x.v]:0);
 			x.u += ac[c] + a.size();
@@ -73,7 +73,7 @@ void bcr(const uint8_t* text_begin, const uint8_t* text_end, uint8_t* bwt_begin)
 
 		// stable counting sort
 		aa.resize(a.size());
-		b[0] = 0;for (int c = 1; c != b.size(); ++c) b[c] = b[c-1] + mc2[c-1];
+		b[0] = 0;std::partial_sum(mc2.begin(),mc2.end()-1,b.begin()+1);
 		for(auto x:a) {
 			auto c = (eol[x.v]>=text_begin?*eol[x.v]:0);
 			aa[b[c]++] = x;
